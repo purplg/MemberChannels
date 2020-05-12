@@ -8,6 +8,15 @@ import (
 	"purplg.com/memberchannels/internal/pkg/database"
 )
 
+// A widget consists of a Category channel and a designated Voice channel
+// The Voice channel waits for a User to join. When a user joins,
+// the widget will:
+// - Create a new voice channel with parameters:
+//   - Name the channel appropriately
+//   - Permissions so that the creating user has more control
+//   - Parented to the Category channel
+// - Save the channel name in case it was generated
+// - Move player to new channel
 type Widget struct {
 	session *discordgo.Session
 	guildDB *database.GuildDB
@@ -19,6 +28,7 @@ type Widget struct {
 	channelName  string
 }
 
+// Just initialize values to prepare the widget
 func New(session *discordgo.Session, log *logrus.Entry, guildDB *database.GuildDB, defaultCategoryName, defaultChannelName string) *Widget {
 	w := &Widget{
 		session: session,
@@ -41,6 +51,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB *database.GuildD
 	return w
 }
 
+// Actually populate the widget to the Guild
 func (w *Widget) Show() error {
 	category, err := w.getCategory()
 	if err != nil {
@@ -61,12 +72,16 @@ func (w *Widget) Show() error {
 	return nil
 }
 
+// Create a new channel for user
 func (w *Widget) NewChannel(user *discordgo.User) {
+	// Look up the saved channel name for user
 	channelName := w.guildDB.UserChannelName(user.ID)
+	// Or generate one if none found
 	if channelName == "" {
 		channelName = fmt.Sprintf("%s's channel", user.Username)
 	}
 
+	// Send API request to create the voice channel
 	if channel, err := w.session.GuildChannelCreateComplex(w.guildDB.GuildID, discordgo.GuildChannelCreateData{
 		Name: channelName,
 		Type: discordgo.ChannelTypeGuildVoice,
@@ -87,6 +102,7 @@ func (w *Widget) NewChannel(user *discordgo.User) {
 	}
 }
 
+// A hack to cleanup all empty channels within category
 func (w *Widget) Sweep() error {
 	var (
 		guild    *discordgo.Guild
