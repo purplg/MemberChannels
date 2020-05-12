@@ -4,7 +4,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func (config *Config) ChannelUpdate(session *discordgo.Session, event *discordgo.ChannelUpdate) {
+func (config *Events) ChannelUpdate(session *discordgo.Session, event *discordgo.ChannelUpdate) {
 	guildDB := config.DB.AsGuild(event.GuildID)
 	categoryID := guildDB.CategoryID()
 

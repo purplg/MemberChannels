@@ -9,11 +9,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"purplg.com/memberchannels/internal/pkg/database"
+	"purplg.com/memberchannels/internal/pkg/environment"
 	"purplg.com/memberchannels/internal/pkg/events"
-	"purplg.com/memberchannels/internal/pkg/variables"
 )
 
-func startDiscordSession(token string, config *events.Config) (*discordgo.Session, error) {
+func startDiscordSession(token string, evnts *events.Events) (*discordgo.Session, error) {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, err
@@ -24,15 +24,15 @@ func startDiscordSession(token string, config *events.Config) (*discordgo.Sessio
 		return nil, err
 	}
 
-	session.AddHandler(config.GuildCreated)
-	session.AddHandler(config.VoiceStateUpdate)
-	session.AddHandler(config.ChannelUpdate)
+	session.AddHandler(evnts.GuildCreated)
+	session.AddHandler(evnts.VoiceStateUpdate)
+	session.AddHandler(evnts.ChannelUpdate)
 
 	return session, nil
 }
 
 func main() {
-	vars := variables.New(os.Getenv("DISCORD_TOKEN"))
+	vars := environment.New(os.Getenv("DISCORD_TOKEN"))
 	logger := logrus.New()
 	log := logrus.NewEntry(logger)
 	log.Logger.SetLevel(logrus.DebugLevel)

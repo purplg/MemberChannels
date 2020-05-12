@@ -7,7 +7,7 @@ import (
 	"purplg.com/memberchannels/internal/pkg/database"
 )
 
-func (config *Config) VoiceStateUpdate(session *discordgo.Session, event *discordgo.VoiceStateUpdate) {
+func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discordgo.VoiceStateUpdate) {
 	log := config.Log.WithField("GuildID", event.GuildID)
 
 	guildDB := config.DB.AsGuild(event.GuildID)
@@ -55,7 +55,7 @@ func (config *Config) VoiceStateUpdate(session *discordgo.Session, event *discor
 	}
 }
 
-func (config *Config) onUserConnect(session *discordgo.Session, guildDB *database.GuildDB, user *discordgo.User) error {
+func (config *Events) onUserConnect(session *discordgo.Session, guildDB *database.GuildDB, user *discordgo.User) error {
 	userChannelName := guildDB.UserChannelName(user.ID)
 	if userChannelName == "" {
 		userChannelName = fmt.Sprintf("%s's channel", user.Username)

@@ -7,8 +7,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 	"purplg.com/memberchannels/internal/pkg/database"
+	"purplg.com/memberchannels/internal/pkg/environment"
 	"purplg.com/memberchannels/internal/pkg/mock"
-	"purplg.com/memberchannels/internal/pkg/variables"
 )
 
 var TEMP_DIR = os.TempDir() + "/memberchannels_testdb"
@@ -17,7 +17,7 @@ func Test_GuildCreated(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	vars := variables.New(mock.Test_Token)
+	vars := environment.New(mock.Test_Token)
 
 	tempDB := os.TempDir() + "/" + mock.Test_DBFile
 	db, err := database.Open(tempDB, logrus.NewEntry(logger))
@@ -27,18 +27,14 @@ func Test_GuildCreated(t *testing.T) {
 	defer db.Close()
 	defer os.RemoveAll(tempDB)
 
-	config := &Config{
-		Vars: vars,
-		Log:  logrus.NewEntry(logger),
-		DB:   db,
-	}
+	config := New(vars, logrus.NewEntry(logger), db)
 	defer config.Close()
 
 	log := logrus.NewEntry(logger)
 	log.WithFields(logrus.Fields{
 		"config.Vars": config.Vars,
-		"config.Log": config.Log,
-		"config.DB": config.DB,
+		"config.Log":  config.Log,
+		"config.DB":   config.DB,
 	})
 
 	session := mock.MockSession()
