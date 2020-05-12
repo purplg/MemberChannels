@@ -19,7 +19,7 @@ import (
 // - Move player to new channel
 type Widget struct {
 	session *discordgo.Session
-	guildDB *database.GuildDB
+	guildDB database.GuildDatabase
 	log     *logrus.Entry
 
 	categoryID   string
@@ -29,11 +29,11 @@ type Widget struct {
 }
 
 // Just initialize values to prepare the widget
-func New(session *discordgo.Session, log *logrus.Entry, guildDB *database.GuildDB, defaultCategoryName, defaultChannelName string) *Widget {
+func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase, defaultCategoryName, defaultChannelName string) *Widget {
 	w := &Widget{
 		session: session,
 		guildDB: guildDB,
-		log:     log.WithField("Widget", guildDB.GuildID),
+		log:     log.WithField("Widget", guildDB.GuildID()),
 
 		categoryID:   guildDB.CategoryID(),
 		categoryName: guildDB.CategoryName(),
@@ -82,7 +82,7 @@ func (w *Widget) NewChannel(user *discordgo.User) {
 	}
 
 	// Send API request to create the voice channel
-	if channel, err := w.session.GuildChannelCreateComplex(w.guildDB.GuildID, discordgo.GuildChannelCreateData{
+	if channel, err := w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
 		Name: channelName,
 		Type: discordgo.ChannelTypeGuildVoice,
 		PermissionOverwrites: []*discordgo.PermissionOverwrite{
@@ -98,7 +98,7 @@ func (w *Widget) NewChannel(user *discordgo.User) {
 		w.log.WithError(err).Errorln("Failed to create user channel")
 	} else {
 		w.guildDB.SetUserChannel(user.ID, channel.ID, channelName)
-		w.session.GuildMemberMove(w.guildDB.GuildID, user.ID, channel.ID)
+		w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, channel.ID)
 	}
 }
 
@@ -110,13 +110,13 @@ func (w *Widget) Sweep() error {
 		err      error
 	)
 
-	if guild, err = w.session.State.Guild(w.guildDB.GuildID); err != nil {
-		if guild, err = w.session.Guild(w.guildDB.GuildID); err != nil {
+	if guild, err = w.session.State.Guild(w.guildDB.GuildID()); err != nil {
+		if guild, err = w.session.Guild(w.guildDB.GuildID()); err != nil {
 			return err
 		}
 	}
 
-	channels, err = w.session.GuildChannels(w.guildDB.GuildID)
+	channels, err = w.session.GuildChannels(w.guildDB.GuildID())
 	if err != nil {
 		return err
 	}

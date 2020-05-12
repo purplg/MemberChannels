@@ -11,7 +11,7 @@ func (config *Events) GuildCreated(session *discordgo.Session, event *discordgo.
 	guildDB := config.DB.AsGuild(event.Guild.ID)
 
 	w := widget.New(session, log, guildDB, config.Vars.DefaultCategoryName, config.Vars.DefaultChannelName)
-	config.Widgets[guildDB.GuildID] = w
+	config.Widgets[guildDB.GuildID()] = w
 
 	if err := w.Show(); err != nil {
 		log.WithError(err).Errorln("Error creating widget")

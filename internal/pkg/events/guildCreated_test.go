@@ -60,7 +60,7 @@ func Test_GuildCreated(t *testing.T) {
 		"channelName":  guildDB.ChannelName(),
 	}).Debugln("Current State")
 
-	if guildDB.GuildID != mock.Test_GuildID {
+	if guildDB.GuildID() != mock.Test_GuildID {
 		t.Error("Invalid guildID")
 	}
 }

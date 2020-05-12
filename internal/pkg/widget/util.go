@@ -13,7 +13,7 @@ func (w *Widget) getCategory() (*discordgo.Channel, error) {
 		}
 	}
 
-	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID, discordgo.GuildChannelCreateData{
+	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
 		Name:      w.categoryName,
 		Type:      discordgo.ChannelTypeGuildCategory,
 		UserLimit: 1,
@@ -30,7 +30,7 @@ func (w *Widget) getChannel(parentID string) (*discordgo.Channel, error) {
 		}
 	}
 
-	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID, discordgo.GuildChannelCreateData{
+	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
 		Name:      w.channelName,
 		Type:      discordgo.ChannelTypeGuildVoice,
 		UserLimit: 1,

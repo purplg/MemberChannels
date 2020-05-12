@@ -13,7 +13,7 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 	guildDB := config.DB.AsGuild(event.GuildID)
 	listeningChannelID := guildDB.ChannelID()
 
-	widget := config.Widgets[guildDB.GuildID]
+	widget := config.Widgets[guildDB.GuildID()]
 	if widget == nil {
 		log.Errorln("Could not find widget for guild")
 		return
@@ -55,7 +55,7 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 	}
 }
 
-func (config *Events) onUserConnect(session *discordgo.Session, guildDB *database.GuildDB, user *discordgo.User) error {
+func (config *Events) onUserConnect(session *discordgo.Session, guildDB database.GuildDatabase, user *discordgo.User) error {
 	userChannelName := guildDB.UserChannelName(user.ID)
 	if userChannelName == "" {
 		userChannelName = fmt.Sprintf("%s's channel", user.Username)
@@ -65,7 +65,7 @@ func (config *Events) onUserConnect(session *discordgo.Session, guildDB *databas
 
 	// Reconfigure listening channel to a user channel
 	channel, err := session.ChannelEditComplex(listeningChannelID, &discordgo.ChannelEdit{
-		Name:      userChannelName,
+		Name: userChannelName,
 		PermissionOverwrites: []*discordgo.PermissionOverwrite{
 			{
 				ID:    user.ID,
@@ -81,10 +81,10 @@ func (config *Events) onUserConnect(session *discordgo.Session, guildDB *databas
 	guildDB.SetUserChannel(user.ID, channel.ID, userChannelName)
 
 	// Create new listening channel
-	channel, err = session.GuildChannelCreateComplex(guildDB.GuildID, discordgo.GuildChannelCreateData{
-		Name:      listeningChannelName,
-		Type:      discordgo.ChannelTypeGuildVoice,
-		ParentID:  guildDB.CategoryID(),
+	channel, err = session.GuildChannelCreateComplex(guildDB.GuildID(), discordgo.GuildChannelCreateData{
+		Name:     listeningChannelName,
+		Type:     discordgo.ChannelTypeGuildVoice,
+		ParentID: guildDB.CategoryID(),
 	})
 	if err != nil {
 		return err

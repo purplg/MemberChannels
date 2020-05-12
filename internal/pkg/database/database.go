@@ -27,11 +27,10 @@ func Open(filename string, log *logrus.Entry) (*DB, error) {
 	return db, nil
 }
 
-func (db *DB) AsGuild(guildID string) *GuildDB {
-	guildDB := &GuildDB{
+func (db *DB) AsGuild(guildID string) GuildDatabase {
+	return guildDB{
 		DB:      db,
-		Log:     db.Log.WithField("guildID", guildID),
-		GuildID: guildID,
+		log:     db.Log.WithField("guildID", guildID),
+		guildID: guildID,
 	}
-	return guildDB
 }
