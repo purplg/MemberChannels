@@ -1,0 +1,58 @@
+package main
+
+import (
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/sirupsen/logrus"
+
+	"purplg.com/memberchannels/internal/pkg/database"
+	"purplg.com/memberchannels/internal/pkg/events"
+	"purplg.com/memberchannels/internal/pkg/variables"
+)
+
+func startDiscordSession(token string, config *events.Config) (*discordgo.Session, error) {
+	session, err := discordgo.New("Bot " + token)
+	if err != nil {
+		return nil, err
+	}
+
+	err = session.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	session.AddHandler(config.GuildCreated)
+	session.AddHandler(config.VoiceStateUpdate)
+	session.AddHandler(config.ChannelUpdate)
+
+	return session, nil
+}
+
+func main() {
+	vars := variables.New(os.Getenv("DISCORD_TOKEN"))
+	logger := logrus.New()
+	log := logrus.NewEntry(logger)
+	log.Logger.SetLevel(logrus.DebugLevel)
+	data, err := database.Open(vars.DBFile, log)
+	if err != nil {
+		log.WithError(err).Fatalln()
+	}
+
+	config := events.New(vars, log, data)
+	defer config.Close()
+
+	session, err := startDiscordSession(vars.DiscordAPIToken, config)
+	if err != nil {
+		log.WithError(err).Errorln()
+		return
+	}
+	defer session.Close()
+
+	log.Println("Bot is now running. Press CTRL-C to exit.")
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	<-sc
+}
