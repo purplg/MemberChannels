@@ -16,26 +16,33 @@ func restClient() *http.Client {
 }
 
 func discordAPIResponse(r *http.Request) (*http.Response, error) {
+	fmt.Printf("Request: %s\n", r.URL.Path)
+
 	pathTokens := strings.Split(r.URL.Path, "/")
-	switch pathTokens[3] {
+	requestType := pathTokens[3]
+	switch requestType {
 	case "users":
-		return usersResponse(r), nil
+		userID := pathTokens[len(pathTokens)-1]
+		return usersResponse(r, userID), nil
 	case "members":
-		return membersResponse(r), nil
+		guildID := pathTokens[len(pathTokens)-2]
+		userID := pathTokens[len(pathTokens)-1]
+		return membersResponse(r, guildID, userID), nil
 	case "roles":
 		return rolesResponse(r), nil
 	case "channels":
 		return channelsResponse(r), nil
 	case "guilds":
-		return guildsResponse(r), nil
+		guildID := pathTokens[len(pathTokens)-1]
+		return guildsResponse(r, guildID), nil
 	}
+
+	fmt.Printf("Unhandled: %s\n", r.URL.Path)
 
 	return nil, fmt.Errorf(unsupportedMockRequest)
 }
 
-func usersResponse(r *http.Request) *http.Response {
-	pathTokens := strings.Split(r.URL.Path, "/")
-	userID := pathTokens[len(pathTokens)-1]
+func usersResponse(r *http.Request, userID string) *http.Response {
 	userName := Test_UserName
 
 	respBody, err := json.Marshal(mockUser(userID, userName))
@@ -46,11 +53,8 @@ func usersResponse(r *http.Request) *http.Response {
 	return newResponse(http.StatusOK, respBody)
 }
 
-func membersResponse(r *http.Request) *http.Response {
-	pathTokens := strings.Split(r.URL.Path, "/")
-	userID := pathTokens[len(pathTokens)-1]
+func membersResponse(r *http.Request, guildID, userID string) *http.Response {
 	userName := Test_UserName
-	guildID := pathTokens[len(pathTokens)-2]
 
 	var (
 		respBody []byte
@@ -112,23 +116,13 @@ func channelsResponse(r *http.Request) *http.Response {
 		respBody []byte
 		err      error
 	)
-
-	if strings.Contains(r.URL.Path, "guilds") {
-		respBody, err = json.Marshal(mockChannels(Test_GuildID))
-	} else {
-		respBody, err = json.Marshal(mockChannel(Test_GuildID, Test_ChannelID, Test_ChannelName))
-	}
-
-	if err != nil {
+	if respBody, err = json.Marshal(mockChannel(Test_GuildID, Test_ChannelID, Test_ChannelName)); err != nil {
 		return newResponse(http.StatusInternalServerError, []byte(err.Error()))
 	}
-
 	return newResponse(http.StatusOK, respBody)
 }
 
-func guildsResponse(r *http.Request) *http.Response {
-	pathTokens := strings.Split(r.URL.Path, "/")
-	guildID := pathTokens[len(pathTokens)-1]
+func guildsResponse(r *http.Request, guildID string) *http.Response {
 	guildName := Test_GuildName
 
 	respBody, err := json.Marshal(mockGuild(guildID, guildName))
