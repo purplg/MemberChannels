@@ -28,7 +28,7 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 			log.WithError(err).Errorln("Could not lookup user on channel join")
 			return
 		}
-		widget.NewChannel(user)
+		widget.NewUserChannel(user)
 	}
 
 	// Only care about channels under managed category

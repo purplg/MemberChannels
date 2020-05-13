@@ -23,5 +23,10 @@ func Test_Widget(t *testing.T) {
 
 	guildDB := db.AsGuild(mock.Test_GuildID)
 
-	New(session, log, guildDB, mock.Test_ChannelName, mock.Test_ChannelName2)
+	New(session, log, guildDB, &WidgetData{
+		CategoryID:        mock.Test_ChannelID,
+		CategoryName:      mock.Test_ChannelName,
+		ListenChannelID:   mock.Test_ChannelID2,
+		ListenChannelName: mock.Test_ChannelName2,
+	})
 }
