@@ -3,28 +3,21 @@
 ### A Discord bot to dynamically create voice channels for users 
 
 # Why?
-Often, you see servers with long lists of voice channels labeled:
+Often, you see servers with excessive lists of voice channels labeled:
 
-* Video Game
-    * Video Game 1
-    * Video Game 2
-    * Video Game 3
-    * Video Game 4
-* Other Game
-    * Other Game 1
-    * Other Game 2
-    * Other Game 3
-    * Other Game 4
+![Excessive channel lists](static/channellist.png "Excessive channel lists")
 
 This project aims to fix that by basing the voice channels on users and only creating the channels when said user wants to.
 
 # How does it work?
-When the bot joins your server, it'll create two default channels. A category channel named `Dynamic Channels` and underneat it a placehold voice channel called `[+] Create channel`
+When the bot joins your server, it'll create two default channels. A category channel named `Dynamic Channels` and underneath it a placehold voice channel called `[+] Create channel`
 
 When any user joins the placehold channel, the bot:
 - Creates a voice channel named `User's channel` with the users' name
 - Gives the uesr permission to manage that channel
 - Moves the user into the channel
+
+![Joining a channel](static/joining.gif "Joining a channel")
 
 Once all users have left a channel and it has become empty, it'll be deleted until the creator rejoins the placeholder channel.
 
