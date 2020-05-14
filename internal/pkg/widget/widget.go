@@ -157,52 +157,9 @@ func (w *widget) UserSwitchedChannel(user *discordgo.User, channel *discordgo.Ch
 
 }
 
-// A hack to cleanup all empty channels within category
-func (w *widget) sweep() error {
-	var (
-		guild    *discordgo.Guild
-		channels []*discordgo.Channel
-		err      error
-	)
-
-	if guild, err = w.session.State.Guild(w.guildDB.GuildID()); err != nil {
-		if guild, err = w.session.Guild(w.guildDB.GuildID()); err != nil {
-			return err
-		}
-	}
-
-	channels, err = w.session.GuildChannels(w.guildDB.GuildID())
-	if err != nil {
-		return err
-	}
-
-	categoryID := w.guildDB.CategoryID()
-	listeningChannelID := w.guildDB.ChannelID()
-
-	// Loop through all channels in guild
-	for _, channel := range channels {
-		if channel.ID == listeningChannelID {
-			continue
-		}
-		// If this is a managed channel
-		if channel.ParentID == categoryID {
-			// Count the number of users in it
-			userCount := 0
-			for _, vs := range guild.VoiceStates {
-				if vs.ChannelID == channel.ID {
-					userCount++
-				}
-			}
-			// If it's empty, remove it
-			if userCount == 0 {
-				w.session.ChannelDelete(channel.ID)
-			}
-		}
-	}
-	return nil
-}
-
 func (w *widget) Close() {
-	w.sweep()
+	for _, channel := range w.userChannels {
+		w.session.ChannelDelete(channel.channel.ID)
+	}
 	w.session.ChannelDelete(w.listenChannel.ID)
 }
