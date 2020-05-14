@@ -158,8 +158,5 @@ func (w *widget) UserSwitchedChannel(user *discordgo.User, channel *discordgo.Ch
 }
 
 func (w *widget) Close() {
-	for _, channel := range w.userChannels {
-		w.session.ChannelDelete(channel.channel.ID)
-	}
 	w.session.ChannelDelete(w.listenChannel.ID)
 }
