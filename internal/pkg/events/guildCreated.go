@@ -17,10 +17,17 @@ func (config *Events) GuildCreated(session *discordgo.Session, event *discordgo.
 		ListenChannelName: guildDB.ChannelName(),
 	}
 
-	w, err := widget.New(session, log, guildDB, widgetData)
-	if err != nil {
-		log.WithError(err).Warnln("Error creating widget")
-		return
+	if widgetData.CategoryName == "" {
+		widgetData.CategoryName = config.Vars.DefaultCategoryName
 	}
-	config.Widgets[guildDB.GuildID()] = w
+
+	if widgetData.ListenChannelName == "" {
+		widgetData.ListenChannelName = config.Vars.DefaultChannelName
+	}
+
+	if w, err := widget.New(session, log, guildDB, widgetData); err != nil {
+		log.WithError(err).Warnln("Error creating widget")
+	} else {
+		config.Widgets[guildDB.GuildID()] = w
+	}
 }

@@ -24,8 +24,9 @@ type Widget struct {
 
 	categoryChannel *discordgo.Channel
 	listenChannel   *discordgo.Channel
-	userChannels    map[string]*discordgo.Channel // map[userID]
-	usersInChannel  map[string][]string
+
+	currentChannel map[string]*discordgo.Channel // map[userID] -> channel
+	userChannels   map[string]*userChannel       // map[channelID] -> userChannel
 }
 
 // Only used to initialize a new Widget
@@ -36,6 +37,12 @@ type WidgetData struct {
 	ListenChannelName string
 }
 
+type userChannel struct {
+	channel   *discordgo.Channel
+	owner     *discordgo.User
+	userCount uint8
+}
+
 // Just initialize values to prepare the widget
 func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase, data *WidgetData) (*Widget, error) {
 	w := &Widget{
@@ -44,7 +51,8 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 		guildDB:         guildDB,
 		categoryChannel: nil,
 		listenChannel:   nil,
-		userChannels:    make(map[string]*discordgo.Channel),
+		currentChannel:  make(map[string]*discordgo.Channel),
+		userChannels:    make(map[string]*userChannel),
 	}
 
 	category, err := w.getCategory(data.CategoryID, data.CategoryName)
@@ -68,7 +76,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 }
 
 // Create a new channel for user
-func (w *Widget) NewUserChannel(user *discordgo.User) {
+func (w *Widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 	// Look up the saved channel name for user
 	channelName := w.guildDB.UserChannelName(user.ID)
 
@@ -78,7 +86,7 @@ func (w *Widget) NewUserChannel(user *discordgo.User) {
 	}
 
 	// Send API request to create the voice channel
-	if channel, err := w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
+	channel, err := w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
 		Name: channelName,
 		Type: discordgo.ChannelTypeGuildVoice,
 		PermissionOverwrites: []*discordgo.PermissionOverwrite{
@@ -90,12 +98,57 @@ func (w *Widget) NewUserChannel(user *discordgo.User) {
 			},
 		},
 		ParentID: w.categoryChannel.ID,
-	}); err != nil {
-		w.log.WithError(err).Errorln("Failed to create user channel")
-	} else {
-		w.guildDB.SetUserChannel(user.ID, channel.ID, channelName)
-		w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, channel.ID)
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	return &userChannel{
+		channel:   channel,
+		owner:     user,
+		userCount: 0,
+	}, nil
+}
+
+func (w *Widget) userLeftChannel(channel *discordgo.Channel) {
+	fmt.Println("userLeftChannel")
+	if userChannel, ok := w.userChannels[channel.ID]; ok {
+		userChannel.userCount--
+		if userChannel.userCount <= 0 {
+			delete(w.userChannels, channel.ID)
+			w.session.ChannelDelete(channel.ID)
+		}
+	}
+}
+
+func (w *Widget) UserSwitchedChannel(user *discordgo.User, channel *discordgo.Channel) {
+	fmt.Println("userSwitchedChannel")
+	if lastChannel, ok := w.currentChannel[user.ID]; ok {
+		fmt.Println("has previous channel")
+		w.userLeftChannel(lastChannel)
+	}
+
+	switch {
+	case channel == nil:
+		fmt.Println("channel == nil")
+		delete(w.currentChannel, user.ID)
+
+	case w.isListenChannel(channel):
+		fmt.Println("isListenChannel")
+		if userChannel, err := w.newUserChannel(user); err != nil {
+			w.log.WithError(err).Errorln("Failed to create user channel")
+		} else {
+			w.userChannels[userChannel.channel.ID] = userChannel
+			w.guildDB.SetUserChannel(user.ID, userChannel.channel.ID, userChannel.channel.Name)
+			w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, userChannel.channel.ID)
+		}
+
+	case w.isUserChannel(channel):
+		fmt.Println("isUserChannel")
+		w.currentChannel[user.ID] = channel
+		w.userChannels[channel.ID].userCount++
+	}
+
 }
 
 // A hack to cleanup all empty channels within category

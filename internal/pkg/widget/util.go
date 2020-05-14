@@ -36,3 +36,15 @@ func (w *Widget) getListenChannel(channelID, defaultName, parentID string) (*dis
 		ParentID: parentID,
 	})
 }
+
+func (w *Widget) isManagedChannel(channel *discordgo.Channel) bool {
+	return channel.ParentID == w.categoryChannel.ID
+}
+
+func (w *Widget) isListenChannel(channel *discordgo.Channel) bool {
+	return channel.ID == w.listenChannel.ID
+}
+
+func (w *Widget) isUserChannel(channel *discordgo.Channel) bool {
+	return w.isManagedChannel(channel) && !w.isListenChannel(channel)
+}
