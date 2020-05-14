@@ -8,12 +8,6 @@ import (
 	"purplg.com/memberchannels/internal/pkg/database"
 )
 
-type Widget interface {
-	UserSwitchedChannel(user *discordgo.User, channel *discordgo.Channel)
-	Close()
-}
-
-
 // A Widget consists of a Category channel and a designated Voice channel
 // The Voice channel waits for a User to join. When a user joins,
 // the Widget will:
@@ -23,6 +17,17 @@ type Widget interface {
 //   - Parented to the Category channel
 // - Save the channel name in case it was generated
 // - Move player to new channel
+
+type Widget interface {
+	UserJoinedManagedChannel(user *discordgo.User, channel *discordgo.Channel)
+	UserDisconnected(user *discordgo.User)
+	ManagedChannelChanged(channel *discordgo.Channel)
+
+	IsManagedChannel(channel *discordgo.Channel) bool
+
+	Close()
+}
+
 type widget struct {
 	session *discordgo.Session
 	log     *logrus.Entry
@@ -31,8 +36,8 @@ type widget struct {
 	categoryChannel *discordgo.Channel
 	listenChannel   *discordgo.Channel
 
-	currentChannel map[string]*discordgo.Channel // map[userID] -> channel
-	userChannels   map[string]*userChannel       // map[channelID] -> userChannel
+	currentChannel map[string]*userChannel // map[userID] -> userChannel
+	userChannels   map[string]*userChannel // map[channelID] -> userChannel
 }
 
 // Only used to initialize a new Widget
@@ -57,7 +62,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 		guildDB:         guildDB,
 		categoryChannel: nil,
 		listenChannel:   nil,
-		currentChannel:  make(map[string]*discordgo.Channel),
+		currentChannel:  make(map[string]*userChannel),
 		userChannels:    make(map[string]*userChannel),
 	}
 
@@ -79,6 +84,62 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 	w.guildDB.SetChannelName(w.listenChannel.Name)
 
 	return w, nil
+}
+
+func (w *widget) UserJoinedManagedChannel(user *discordgo.User, channel *discordgo.Channel) {
+	log := w.log.WithFields(logrus.Fields{
+		"user":    user.Username,
+		"channel": channel.Name,
+	})
+	log.Debugln("UserJoinedManagedChannel")
+
+	if _, ok := w.currentChannel[user.ID]; ok {
+		w.UserDisconnected(user)
+	}
+
+	if w.isListenChannel(channel) {
+		if userChan, err := w.newUserChannel(user); err != nil {
+			log.WithError(err).Errorln("Error creating User Channel")
+		} else {
+			w.userChannels[userChan.channel.ID] = userChan
+			w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, userChan.channel.ID)
+		}
+	} else {
+		if userChan, ok := w.userChannels[channel.ID]; ok {
+			w.currentChannel[user.ID] = userChan
+			userChan.userCount++
+		}
+	}
+}
+
+func (w *widget) UserDisconnected(user *discordgo.User) {
+	log := w.log.WithFields(logrus.Fields{
+		"user": user.Username,
+	})
+	log.Debugln("UserDisconnected")
+
+	if userChan, ok := w.currentChannel[user.ID]; ok {
+		userChan.userCount--
+		log.Debugln("User Channel found")
+		if userChan.userCount == 0 {
+			log.Debugln("User Channel deleted")
+			w.session.ChannelDelete(userChan.channel.ID)
+		}
+	} else {
+		log.Debugln("User Channel doesn't exist")
+	}
+}
+
+func (w *widget) ManagedChannelChanged(channel *discordgo.Channel) {
+	w.log.Warnln("Not implemented yet")
+}
+
+func (w *widget) IsManagedChannel(channel *discordgo.Channel) bool {
+	return channel.ParentID == w.categoryChannel.ID
+}
+
+func (w *widget) Close() {
+	w.session.ChannelDelete(w.listenChannel.ID)
 }
 
 // Create a new channel for user
@@ -116,47 +177,41 @@ func (w *widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 	}, nil
 }
 
-func (w *widget) userLeftChannel(channel *discordgo.Channel) {
-	fmt.Println("userLeftChannel")
-	if userChannel, ok := w.userChannels[channel.ID]; ok {
-		userChannel.userCount--
-		if userChannel.userCount <= 0 {
-			delete(w.userChannels, channel.ID)
-			w.session.ChannelDelete(channel.ID)
-		}
-	}
-}
-
-func (w *widget) UserSwitchedChannel(user *discordgo.User, channel *discordgo.Channel) {
-	fmt.Println("userSwitchedChannel")
-	if lastChannel, ok := w.currentChannel[user.ID]; ok {
-		fmt.Println("has previous channel")
-		w.userLeftChannel(lastChannel)
-	}
-
-	switch {
-	case channel == nil:
-		fmt.Println("channel == nil")
-		delete(w.currentChannel, user.ID)
-
-	case w.isListenChannel(channel):
-		fmt.Println("isListenChannel")
-		if userChannel, err := w.newUserChannel(user); err != nil {
-			w.log.WithError(err).Errorln("Failed to create user channel")
-		} else {
-			w.userChannels[userChannel.channel.ID] = userChannel
-			w.guildDB.SetUserChannel(user.ID, userChannel.channel.ID, userChannel.channel.Name)
-			w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, userChannel.channel.ID)
+func (w *widget) getCategory(categoryID, defaultName string) (*discordgo.Channel, error) {
+	if w.categoryChannel == nil {
+		if category, err := w.session.State.Channel(categoryID); err == nil {
+			return category, nil
 		}
 
-	case w.isUserChannel(channel):
-		fmt.Println("isUserChannel")
-		w.currentChannel[user.ID] = channel
-		w.userChannels[channel.ID].userCount++
+		if category, err := w.session.Channel(categoryID); err == nil {
+			return category, nil
+		}
 	}
 
+	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
+		Name:      defaultName,
+		Type:      discordgo.ChannelTypeGuildCategory,
+		UserLimit: 1,
+	})
 }
 
-func (w *widget) Close() {
-	w.session.ChannelDelete(w.listenChannel.ID)
+func (w *widget) getListenChannel(channelID, defaultName, parentID string) (*discordgo.Channel, error) {
+	if w.listenChannel == nil {
+		if channel, err := w.session.State.Channel(channelID); err == nil {
+			return channel, nil
+		}
+		if channel, err := w.session.Channel(channelID); err == nil {
+			return channel, nil
+		}
+	}
+
+	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
+		Name:     defaultName,
+		Type:     discordgo.ChannelTypeGuildVoice,
+		ParentID: parentID,
+	})
+}
+
+func (w *widget) isListenChannel(channel *discordgo.Channel) bool {
+	return channel.ID == w.listenChannel.ID
 }

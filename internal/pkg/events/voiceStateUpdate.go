@@ -19,7 +19,21 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 		log.WithError(err).WithField("UserID", user.ID).Warnln("Could not find user")
 		return
 	}
-	channel, _ := session.Channel(event.ChannelID)
 
-	widget.UserSwitchedChannel(user, channel)
+	if event.ChannelID == "" {
+		widget.UserDisconnected(user)
+		return
+	}
+
+	channel, err := session.Channel(event.ChannelID)
+	if err != nil {
+		log.WithError(err).WithField("ChannelID", channel.ID).Warnln("Could not find channel")
+		return
+	}
+
+	if widget.IsManagedChannel(channel) {
+		widget.UserJoinedManagedChannel(user, channel)
+	} else {
+		widget.UserDisconnected(user)
+	}
 }
