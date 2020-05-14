@@ -2,7 +2,7 @@ package widget
 
 import "github.com/bwmarrin/discordgo"
 
-func (w *Widget) getCategory(categoryID, defaultName string) (*discordgo.Channel, error) {
+func (w *widget) getCategory(categoryID, defaultName string) (*discordgo.Channel, error) {
 	if w.categoryChannel == nil {
 		if category, err := w.session.State.Channel(categoryID); err == nil {
 			return category, nil
@@ -20,7 +20,7 @@ func (w *Widget) getCategory(categoryID, defaultName string) (*discordgo.Channel
 	})
 }
 
-func (w *Widget) getListenChannel(channelID, defaultName, parentID string) (*discordgo.Channel, error) {
+func (w *widget) getListenChannel(channelID, defaultName, parentID string) (*discordgo.Channel, error) {
 	if w.listenChannel == nil {
 		if channel, err := w.session.State.Channel(channelID); err == nil {
 			return channel, nil
@@ -37,14 +37,14 @@ func (w *Widget) getListenChannel(channelID, defaultName, parentID string) (*dis
 	})
 }
 
-func (w *Widget) isManagedChannel(channel *discordgo.Channel) bool {
+func (w *widget) isManagedChannel(channel *discordgo.Channel) bool {
 	return channel.ParentID == w.categoryChannel.ID
 }
 
-func (w *Widget) isListenChannel(channel *discordgo.Channel) bool {
+func (w *widget) isListenChannel(channel *discordgo.Channel) bool {
 	return channel.ID == w.listenChannel.ID
 }
 
-func (w *Widget) isUserChannel(channel *discordgo.Channel) bool {
+func (w *widget) isUserChannel(channel *discordgo.Channel) bool {
 	return w.isManagedChannel(channel) && !w.isListenChannel(channel)
 }

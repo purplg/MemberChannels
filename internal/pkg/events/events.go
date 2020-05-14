@@ -12,7 +12,7 @@ type Events struct {
 	Vars    *environment.Environment
 	Log     *logrus.Entry
 	DB      *database.DB
-	Widgets map[string]*widget.Widget
+	Widgets map[string]widget.Widget
 }
 
 func New(vars *environment.Environment, log *logrus.Entry, db *database.DB) *Events {
@@ -20,7 +20,7 @@ func New(vars *environment.Environment, log *logrus.Entry, db *database.DB) *Eve
 		Vars:    vars,
 		Log:     log,
 		DB:      db,
-		Widgets: make(map[string]*widget.Widget),
+		Widgets: make(map[string]widget.Widget),
 	}
 }
 

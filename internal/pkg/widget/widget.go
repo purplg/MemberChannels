@@ -8,6 +8,12 @@ import (
 	"purplg.com/memberchannels/internal/pkg/database"
 )
 
+type Widget interface {
+	UserSwitchedChannel(user *discordgo.User, channel *discordgo.Channel)
+	Close()
+}
+
+
 // A Widget consists of a Category channel and a designated Voice channel
 // The Voice channel waits for a User to join. When a user joins,
 // the Widget will:
@@ -17,7 +23,7 @@ import (
 //   - Parented to the Category channel
 // - Save the channel name in case it was generated
 // - Move player to new channel
-type Widget struct {
+type widget struct {
 	session *discordgo.Session
 	log     *logrus.Entry
 	guildDB database.GuildDatabase
@@ -44,8 +50,8 @@ type userChannel struct {
 }
 
 // Just initialize values to prepare the widget
-func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase, data *WidgetData) (*Widget, error) {
-	w := &Widget{
+func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase, data *WidgetData) (Widget, error) {
+	w := &widget{
 		session:         session,
 		log:             log,
 		guildDB:         guildDB,
@@ -76,7 +82,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 }
 
 // Create a new channel for user
-func (w *Widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
+func (w *widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 	// Look up the saved channel name for user
 	channelName := w.guildDB.UserChannelName(user.ID)
 
@@ -110,7 +116,7 @@ func (w *Widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 	}, nil
 }
 
-func (w *Widget) userLeftChannel(channel *discordgo.Channel) {
+func (w *widget) userLeftChannel(channel *discordgo.Channel) {
 	fmt.Println("userLeftChannel")
 	if userChannel, ok := w.userChannels[channel.ID]; ok {
 		userChannel.userCount--
@@ -121,7 +127,7 @@ func (w *Widget) userLeftChannel(channel *discordgo.Channel) {
 	}
 }
 
-func (w *Widget) UserSwitchedChannel(user *discordgo.User, channel *discordgo.Channel) {
+func (w *widget) UserSwitchedChannel(user *discordgo.User, channel *discordgo.Channel) {
 	fmt.Println("userSwitchedChannel")
 	if lastChannel, ok := w.currentChannel[user.ID]; ok {
 		fmt.Println("has previous channel")
@@ -152,7 +158,7 @@ func (w *Widget) UserSwitchedChannel(user *discordgo.User, channel *discordgo.Ch
 }
 
 // A hack to cleanup all empty channels within category
-func (w *Widget) Sweep() error {
+func (w *widget) sweep() error {
 	var (
 		guild    *discordgo.Guild
 		channels []*discordgo.Channel
@@ -196,7 +202,7 @@ func (w *Widget) Sweep() error {
 	return nil
 }
 
-func (w *Widget) Close() {
-	w.Sweep()
+func (w *widget) Close() {
+	w.sweep()
 	w.session.ChannelDelete(w.listenChannel.ID)
 }
