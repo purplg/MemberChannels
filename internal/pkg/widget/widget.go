@@ -178,14 +178,8 @@ func (w *widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 }
 
 func (w *widget) getCategory(categoryID, defaultName string) (*discordgo.Channel, error) {
-	if w.categoryChannel == nil {
-		if category, err := w.session.State.Channel(categoryID); err == nil {
-			return category, nil
-		}
-
-		if category, err := w.session.Channel(categoryID); err == nil {
-			return category, nil
-		}
+	if category, err := w.session.Channel(categoryID); err == nil {
+		return category, nil
 	}
 
 	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
@@ -196,13 +190,8 @@ func (w *widget) getCategory(categoryID, defaultName string) (*discordgo.Channel
 }
 
 func (w *widget) getListenChannel(channelID, defaultName, parentID string) (*discordgo.Channel, error) {
-	if w.listenChannel == nil {
-		if channel, err := w.session.State.Channel(channelID); err == nil {
-			return channel, nil
-		}
-		if channel, err := w.session.Channel(channelID); err == nil {
-			return channel, nil
-		}
+	if channel, err := w.session.Channel(channelID); err == nil {
+		return channel, nil
 	}
 
 	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
