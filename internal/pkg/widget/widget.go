@@ -20,7 +20,7 @@ import (
 
 type Widget interface {
 	UserJoinedManagedChannel(user *discordgo.User, channel *discordgo.Channel)
-	UserDisconnected(user *discordgo.User)
+	UserDisconnected(userID string)
 	ManagedChannelChanged(channel *discordgo.Channel)
 
 	IsManagedChannel(channel *discordgo.Channel) bool
@@ -94,7 +94,7 @@ func (w *widget) UserJoinedManagedChannel(user *discordgo.User, channel *discord
 	log.Debugln("UserJoinedManagedChannel")
 
 	if _, ok := w.currentChannel[user.ID]; ok {
-		w.UserDisconnected(user)
+		w.UserDisconnected(user.ID)
 	}
 
 	if w.isListenChannel(channel) {
@@ -112,13 +112,13 @@ func (w *widget) UserJoinedManagedChannel(user *discordgo.User, channel *discord
 	}
 }
 
-func (w *widget) UserDisconnected(user *discordgo.User) {
+func (w *widget) UserDisconnected(userID string) {
 	log := w.log.WithFields(logrus.Fields{
-		"user": user.Username,
+		"userID": userID,
 	})
 	log.Debugln("UserDisconnected")
 
-	if userChan, ok := w.currentChannel[user.ID]; ok {
+	if userChan, ok := w.currentChannel[userID]; ok {
 		userChan.userCount--
 		log.Debugln("User Channel found")
 		if userChan.userCount == 0 {
