@@ -201,9 +201,10 @@ func (w *widget) getListenChannel(channelID, defaultName, parentID string) (*dis
 	}
 
 	return w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), discordgo.GuildChannelCreateData{
-		Name:     defaultName,
-		Type:     discordgo.ChannelTypeGuildVoice,
-		ParentID: parentID,
+		Name:      defaultName,
+		Type:      discordgo.ChannelTypeGuildVoice,
+		UserLimit: 1,
+		ParentID:  parentID,
 	})
 }
 
