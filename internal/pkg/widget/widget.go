@@ -131,7 +131,13 @@ func (w *widget) UserDisconnected(userID string) {
 }
 
 func (w *widget) ManagedChannelChanged(channel *discordgo.Channel) {
-	w.log.Warnln("Not implemented yet")
+	if w.isListenChannel(channel) {
+		w.guildDB.SetChannelName(channel.Name)
+		w.log.WithField("channelName", channel.Name).Debugln("New listen channel name")
+	} else if userChan, ok := w.userChannels[channel.ID]; ok {
+		w.guildDB.SetUserChannel(userChan.owner.ID, channel.ID, channel.Name)
+		w.log.WithField("channelName", channel.Name).Debugln("New user channel name")
+	}
 }
 
 func (w *widget) IsManagedChannel(channel *discordgo.Channel) bool {
