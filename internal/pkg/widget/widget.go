@@ -8,15 +8,13 @@ import (
 	"purplg.com/memberchannels/internal/pkg/database"
 )
 
-// A Widget consists of a Category channel and a designated Voice channel
-// The Voice channel waits for a User to join. When a user joins,
-// the Widget will:
-// - Create a new voice channel with parameters:
-//   - Name the channel appropriately
-//   - Permissions so that the creating user has more control
-//   - Parented to the Category channel
-// - Save the channel name in case it was generated
-// - Move player to new channel
+// A Widget consists of a category channel and a designated Voice channel (listen channel)
+// The listen channel waits for a user to join.
+// When a user joins, a userChannel is created which:
+// - Is a voice channel parented to the category channel
+// - Named after the user (default) or by the user
+// - Gives the user addition permissions the userChannel
+// Then the user is automatically moved into this new channel
 
 type Widget interface {
 	UserJoinedManagedChannel(user *discordgo.User, channel *discordgo.Channel)
@@ -26,64 +24,6 @@ type Widget interface {
 	IsManagedChannel(channel *discordgo.Channel) bool
 
 	Close()
-}
-
-type widget struct {
-	session *discordgo.Session
-	log     *logrus.Entry
-	guildDB database.GuildDatabase
-
-	categoryChannel *discordgo.Channel
-	listenChannel   *discordgo.Channel
-
-	currentChannel map[string]*userChannel // map[userID] -> userChannel
-	userChannels   map[string]*userChannel // map[channelID] -> userChannel
-}
-
-// Only used to initialize a new Widget
-type WidgetData struct {
-	CategoryID        string
-	CategoryName      string
-	ListenChannelID   string
-	ListenChannelName string
-}
-
-type userChannel struct {
-	channel   *discordgo.Channel
-	owner     *discordgo.User
-	userCount uint8
-}
-
-// Just initialize values to prepare the widget
-func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase, data *WidgetData) (Widget, error) {
-	w := &widget{
-		session:         session,
-		log:             log,
-		guildDB:         guildDB,
-		categoryChannel: nil,
-		listenChannel:   nil,
-		currentChannel:  make(map[string]*userChannel),
-		userChannels:    make(map[string]*userChannel),
-	}
-
-	category, err := w.getCategory(data.CategoryID, data.CategoryName)
-	if err != nil {
-		return nil, err
-	}
-	w.categoryChannel = category
-
-	listenChannel, err := w.getListenChannel(data.ListenChannelID, data.ListenChannelName, w.categoryChannel.ID)
-	if err != nil {
-		return nil, err
-	}
-	w.listenChannel = listenChannel
-
-	w.guildDB.SetCategoryID(w.categoryChannel.ID)
-	w.guildDB.SetCategoryName(w.categoryChannel.Name)
-	w.guildDB.SetChannelID(w.listenChannel.ID)
-	w.guildDB.SetChannelName(w.listenChannel.Name)
-
-	return w, nil
 }
 
 func (w *widget) UserJoinedManagedChannel(user *discordgo.User, channel *discordgo.Channel) {
@@ -148,6 +88,64 @@ func (w *widget) Close() {
 	w.session.ChannelDelete(w.listenChannel.ID)
 }
 
+type widget struct {
+	session *discordgo.Session
+	log     *logrus.Entry
+	guildDB database.GuildDatabase
+
+	categoryChannel *discordgo.Channel
+	listenChannel   *discordgo.Channel
+
+	currentChannel map[string]*userChannel // map[userID] -> userChannel
+	userChannels   map[string]*userChannel // map[channelID] -> userChannel
+}
+
+type userChannel struct {
+	channel   *discordgo.Channel
+	owner     *discordgo.User
+	userCount uint8
+}
+
+// Only used to initialize a new Widget
+type WidgetData struct {
+	CategoryID        string
+	CategoryName      string
+	ListenChannelID   string
+	ListenChannelName string
+}
+
+// Just initialize values to prepare the widget
+func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase, data *WidgetData) (Widget, error) {
+	w := &widget{
+		session:         session,
+		log:             log,
+		guildDB:         guildDB,
+		categoryChannel: nil,
+		listenChannel:   nil,
+		currentChannel:  make(map[string]*userChannel),
+		userChannels:    make(map[string]*userChannel),
+	}
+
+	category, err := w.getCategory(data.CategoryID, data.CategoryName)
+	if err != nil {
+		return nil, err
+	}
+	w.categoryChannel = category
+
+	listenChannel, err := w.getListenChannel(data.ListenChannelID, data.ListenChannelName, w.categoryChannel.ID)
+	if err != nil {
+		return nil, err
+	}
+	w.listenChannel = listenChannel
+
+	w.guildDB.SetCategoryID(w.categoryChannel.ID)
+	w.guildDB.SetCategoryName(w.categoryChannel.Name)
+	w.guildDB.SetChannelID(w.listenChannel.ID)
+	w.guildDB.SetChannelName(w.listenChannel.Name)
+
+	return w, nil
+}
+
 // Create a new channel for user
 func (w *widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 	// Look up the saved channel name for user
@@ -183,6 +181,7 @@ func (w *widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 	}, nil
 }
 
+// Attempt to find existing category channel or create a new one
 func (w *widget) getCategory(categoryID, defaultName string) (*discordgo.Channel, error) {
 	if category, err := w.session.Channel(categoryID); err == nil {
 		return category, nil
@@ -195,6 +194,7 @@ func (w *widget) getCategory(categoryID, defaultName string) (*discordgo.Channel
 	})
 }
 
+// Attempt to find existing listen channel or create a new one
 func (w *widget) getListenChannel(channelID, defaultName, parentID string) (*discordgo.Channel, error) {
 	if channel, err := w.session.Channel(channelID); err == nil {
 		return channel, nil
