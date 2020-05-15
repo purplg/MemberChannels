@@ -16,10 +16,9 @@ When any user joins the placehold channel, the bot:
 - Creates a voice channel named `User's channel` with the users' name
 - Gives the uesr permission to manage that channel
 - Moves the user into the channel
+Once all users have left a channel and it has become empty, the channel will be removed.
 
 ![Joining a channel](static/joining.gif "Joining a channel")
-
-Once all users have left a channel and it has become empty, it'll be deleted until the creator rejoins the placeholder channel.
 
 ## Renaming
 If any of the channels are renamed, including the category and the placehold voice channel, the name will be remembered.
