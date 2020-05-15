@@ -14,7 +14,7 @@ When the bot joins your server, it'll create two default channels. A category ch
 
 When any user joins the placehold channel, the bot:
 - Creates a voice channel named `User's channel` with the users' name
-- Gives the uesr permission to manage that channel
+- Gives the user permission to manage that channel
 - Moves the user into the channel
 
 Once all users have left a channel and it has become empty, the channel will be removed.
