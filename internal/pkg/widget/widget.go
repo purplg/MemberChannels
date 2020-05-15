@@ -41,8 +41,8 @@ func (w *widget) UserJoinedManagedChannel(user *discordgo.User, channel *discord
 		if userChan, err := w.newUserChannel(user); err != nil {
 			log.WithError(err).Errorln("Error creating User Channel")
 		} else {
-			w.userChannels[userChan.channel.ID] = userChan
-			w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, userChan.channel.ID)
+			w.userChannels[userChan.ID] = userChan
+			w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, userChan.ID)
 		}
 	} else {
 		if userChan, ok := w.userChannels[channel.ID]; ok {
@@ -63,7 +63,7 @@ func (w *widget) UserDisconnected(userID string) {
 		log.Debugln("User Channel found")
 		if userChan.userCount == 0 {
 			log.Debugln("User Channel deleted")
-			w.session.ChannelDelete(userChan.channel.ID)
+			w.session.ChannelDelete(userChan.ID)
 		}
 	} else {
 		log.Debugln("User Channel doesn't exist")
@@ -101,7 +101,7 @@ type widget struct {
 }
 
 type userChannel struct {
-	channel   *discordgo.Channel
+	*discordgo.Channel
 	owner     *discordgo.User
 	userCount uint8
 }
@@ -175,7 +175,7 @@ func (w *widget) newUserChannel(user *discordgo.User) (*userChannel, error) {
 	}
 
 	return &userChannel{
-		channel:   channel,
+		Channel:   channel,
 		owner:     user,
 		userCount: 0,
 	}, nil
