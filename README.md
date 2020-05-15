@@ -25,3 +25,19 @@ Once all users have left a channel and it has become empty, the channel will be 
 If any of the channels are renamed, including the category and the placehold voice channel, the name will be remembered.
 
 For example, if a user named `ImAHuman` renames their channel from the default `IAmHuman's Channel` to `This is my channel"`, then from then on when `ImAHuman` joins the placeholder, it'll name their channel `This is my channel`
+
+# Building
+
+Not yet written.
+
+# Joining the bot to your server
+
+## Your own bot
+
+Not yet written.
+
+## Public bot
+
+Not yet written
+
+# Support
