@@ -1,0 +1,13 @@
+version: "3.5"
+
+volumes:
+  memberchannels_data:
+
+services:
+  memberchannels:
+    image: memberchannels:latest
+    container_name: "memberchannels"
+    env_file: .env
+    volumes:
+      - memberchannels_data:/dist/db
+    restart: always
