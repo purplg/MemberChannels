@@ -21,7 +21,7 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 
 	channel, err := session.Channel(event.ChannelID)
 	if err != nil {
-		log.WithError(err).WithField("ChannelID", channel.ID).Warnln("Could not find channel")
+		log.WithError(err).WithField("ChannelID", event.ChannelID).Warnln("Could not find channel")
 		return
 	}
 
