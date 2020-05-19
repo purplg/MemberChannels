@@ -14,27 +14,20 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 		return
 	}
 
-	if event.ChannelID == "" {
-		widget.UserDisconnected(event.UserID)
-		return
-	}
-
-	channel, err := session.Channel(event.ChannelID)
-	if err != nil {
-		log.WithError(err).WithField("ChannelID", event.ChannelID).Warnln("Could not find channel")
-		return
-	}
-
-	if !widget.IsManagedChannel(channel) {
-		widget.UserDisconnected(event.UserID)
-		return
-	}
-
 	user, err := session.User(event.UserID)
 	if err != nil {
 		log.WithError(err).WithField("UserID", user.ID).Warnln("Could not find user")
 		return
 	}
 
-	widget.UserJoinedManagedChannel(user, channel)
+	if event.ChannelID == "" {
+		widget.UserVoiceEvent(user, nil)
+	} else {
+		channel, err := session.Channel(event.ChannelID)
+		if err != nil {
+			log.WithError(err).WithField("ChannelID", event.ChannelID).Warnln("Could not find channel")
+		} else {
+			widget.UserVoiceEvent(user, channel)
+		}
+	}
 }

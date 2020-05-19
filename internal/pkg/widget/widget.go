@@ -17,64 +17,67 @@ import (
 // Then the user is automatically moved into this new channel
 
 type Widget interface {
-	UserJoinedManagedChannel(user *discordgo.User, channel *discordgo.Channel)
-	UserDisconnected(userID string)
-	ManagedChannelChanged(channel *discordgo.Channel)
+	UserVoiceEvent(user *discordgo.User, channel *discordgo.Channel)
+	ChannelChanged(channel *discordgo.Channel)
 
 	IsManagedChannel(channel *discordgo.Channel) bool
 
 	Close()
 }
 
-func (w *widget) UserJoinedManagedChannel(user *discordgo.User, channel *discordgo.Channel) {
+func (w *widget) UserVoiceEvent(user *discordgo.User, channel *discordgo.Channel) {
 	log := w.log.WithFields(logrus.Fields{
-		"user":    user.Username,
-		"channel": channel.Name,
+		"User": user.Username,
 	})
-	log.Debugln("UserJoinedManagedChannel")
-
-	if _, ok := w.currentChannel[user.ID]; ok {
-		w.UserDisconnected(user.ID)
+	if channel != nil {
+		log = log.WithFields(logrus.Fields{
+			"Channel": channel.Name,
+		})
 	}
 
-	if w.isListenChannel(channel) {
-		if userChan, err := w.newUserChannel(user); err != nil {
-			log.WithError(err).Errorln("Error creating User Channel")
+	log.Debugln("UserVoiceEvent")
+	// Switch
+	if prevChannel, ok := w.currentChannel[user.ID]; ok {
+		prevChannel.userCount--
+		log.Debugf("Found previous channel: %d\n", prevChannel.userCount)
+		if prevChannel.userCount == 0 {
+			log.Debugln("Empty. Deleting")
+			w.session.ChannelDelete(prevChannel.ID)
+		}
+	}
+
+	if channel == nil {
+		log.Debugln("No channel: user left")
+		delete(w.currentChannel, user.ID)
+		return
+	}
+
+	// Create new
+	if channel.ID == w.listenChannel.ID {
+		log.Debugln("Creating new channel")
+		if userChannel, err := w.newUserChannel(user); err != nil {
+			log.WithError(err).Errorln("Error creating new user channel")
 		} else {
-			w.userChannels[userChan.ID] = userChan
-			w.session.GuildMemberMove(w.guildDB.GuildID(), user.ID, userChan.ID)
+			delete(w.currentChannel, user.ID)
+			w.activeChannels[userChannel.ID] = userChannel
+			w.session.GuildMemberMove(userChannel.GuildID, user.ID, userChannel.ID)
 		}
-	} else {
-		if userChan, ok := w.userChannels[channel.ID]; ok {
-			w.currentChannel[user.ID] = userChan
-			userChan.userCount++
-		}
+		return
+	}
+
+	// Join
+	if existingChannel := w.activeChannels[channel.ID]; existingChannel != nil {
+		w.currentChannel[user.ID] = existingChannel
+		existingChannel.userCount++
+		log.Debugf("Joining existing channel: %d\n", existingChannel.userCount)
 	}
 }
 
-func (w *widget) UserDisconnected(userID string) {
-	log := w.log.WithFields(logrus.Fields{
-		"userID": userID,
-	})
-	log.Debugln("UserDisconnected")
-
-	if userChan, ok := w.currentChannel[userID]; ok {
-		userChan.userCount--
-		log.Debugln("User Channel found")
-		if userChan.userCount == 0 {
-			log.Debugln("User Channel deleted")
-			w.session.ChannelDelete(userChan.ID)
-		}
-	} else {
-		log.Debugln("User Channel doesn't exist")
-	}
-}
-
-func (w *widget) ManagedChannelChanged(channel *discordgo.Channel) {
+func (w *widget) ChannelChanged(channel *discordgo.Channel) {
 	if w.isListenChannel(channel) {
 		w.guildDB.SetChannelName(channel.Name)
 		w.log.WithField("channelName", channel.Name).Debugln("New listen channel name")
-	} else if userChan, ok := w.userChannels[channel.ID]; ok {
+	} else if userChan, ok := w.activeChannels[channel.ID]; ok {
 		w.guildDB.SetUserChannel(userChan.owner.ID, channel.ID, channel.Name)
 		w.log.WithField("channelName", channel.Name).Debugln("New user channel name")
 	}
@@ -97,7 +100,7 @@ type widget struct {
 	listenChannel   *discordgo.Channel
 
 	currentChannel map[string]*userChannel // map[userID] -> userChannel
-	userChannels   map[string]*userChannel // map[channelID] -> userChannel
+	activeChannels map[string]*userChannel // map[channelID] -> userChannel
 }
 
 type userChannel struct {
@@ -123,7 +126,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 		categoryChannel: nil,
 		listenChannel:   nil,
 		currentChannel:  make(map[string]*userChannel),
-		userChannels:    make(map[string]*userChannel),
+		activeChannels:  make(map[string]*userChannel),
 	}
 
 	category, err := w.getCategory(data.CategoryID, data.CategoryName)

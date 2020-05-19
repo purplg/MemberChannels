@@ -14,6 +14,6 @@ func (config *Events) ChannelUpdate(session *discordgo.Session, event *discordgo
 	}
 
 	if widget.IsManagedChannel(event.Channel) {
-		widget.ManagedChannelChanged(event.Channel)
+		widget.ChannelChanged(event.Channel)
 	}
 }
