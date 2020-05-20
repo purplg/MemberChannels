@@ -1,4 +1,4 @@
-# Dynamic Members
+# Member Channels
 
 ### A Discord bot to dynamically create voice channels for users 
 
@@ -39,5 +39,3 @@ Not yet written.
 ## Public bot
 
 Not yet written
-
-# Support
