@@ -4,14 +4,14 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type userChannel struct {
+type memberChannel struct {
 	*discordgo.Channel
 	ownerID    string
 	visitorIDs []string
 }
 
 // Returns true if there was an available owner to take over
-func (uc *userChannel) PopToOwner() bool {
+func (uc *memberChannel) PopToOwner() bool {
 	if len(uc.visitorIDs) == 0 {
 		return false
 	}
@@ -20,11 +20,11 @@ func (uc *userChannel) PopToOwner() bool {
 	return true
 }
 
-func (uc *userChannel) AddVisitor(userID string) {
+func (uc *memberChannel) AddVisitor(userID string) {
 	uc.visitorIDs = append(uc.visitorIDs, userID)
 }
 
-func (uc *userChannel) RemoveVisitor(userID string) {
+func (uc *memberChannel) RemoveVisitor(userID string) {
 	for i := 0; i < len(uc.visitorIDs); i++ {
 		if uc.visitorIDs[i] == userID {
 			uc.visitorIDs = append(uc.visitorIDs[:i], uc.visitorIDs[i+1:]...)

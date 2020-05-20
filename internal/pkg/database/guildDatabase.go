@@ -26,8 +26,8 @@ type GuildDatabase interface {
 
 	// User data
 	ChannelOwner(channelID string) string
-	UserChannelName(userID string) string
-	SetUserChannel(userid, channelID, channelName string)
+	MemberChannelName(userID string) string
+	SetMemberChannel(userid, channelID, channelName string)
 
 	// * Guild data
 	CategoryID() string
@@ -68,7 +68,7 @@ func (g guildDB) ChannelOwner(channelID string) string {
 	return value
 }
 
-func (g guildDB) UserChannelName(userID string) string {
+func (g guildDB) MemberChannelName(userID string) string {
 	value, err := g.getValue(U_CHANNELNAME + userID)
 	if err != nil {
 		return ""
@@ -76,7 +76,7 @@ func (g guildDB) UserChannelName(userID string) string {
 	return value
 }
 
-func (g guildDB) SetUserChannel(userID string, channelID string, channelName string) {
+func (g guildDB) SetMemberChannel(userID string, channelID string, channelName string) {
 	g.setValue(U_CHANNELNAME+userID, channelName)
 	g.setValue(C_OWNER+channelID, userID)
 }
