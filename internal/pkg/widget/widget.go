@@ -77,8 +77,10 @@ func (w *Widget) Spawn(data *WidgetData) error {
 func (w *Widget) UserJoined(userID, channelID string) {
 	if activeChannel, ok := w.activeChannels[channelID]; ok {
 		w.currentChannel[userID] = activeChannel
-		activeChannel.AddVisitor(userID)
-		w.log.Debugf("VisitorCount: %d\n", len(activeChannel.Visitors))
+		if activeChannel.ownerID != userID {
+			activeChannel.AddVisitor(userID)
+		}
+		w.log.Debugf("VisitorCount: %d\n", len(activeChannel.visitorIDs))
 	}
 }
 
@@ -89,11 +91,19 @@ func (w *Widget) UserLeft(userID string) {
 	}
 
 	delete(w.currentChannel, userID)
-	prevChannel.RemoveVisitor(userID)
-	w.log.Debugf("Found previous channel: %d\n", len(prevChannel.Visitors))
-	if len(prevChannel.Visitors) == 0 {
-		w.log.Debugln("Empty. Deleting")
-		w.session.ChannelDelete(prevChannel.ID)
+
+	if prevChannel.ownerID == userID {
+		w.log.Debugln("User is owner")
+		if prevChannel.PopToOwner() {
+			w.log.Debugln("Popping to new owner")
+			channelName := w.GuildDB.UserChannelName(prevChannel.ownerID)
+			w.session.ChannelEditComplex(prevChannel.ID, changeOwnerChannelData(channelName, prevChannel.ownerID))
+		} else {
+			w.log.Debugln("Empty. Deleting")
+			w.session.ChannelDelete(prevChannel.ID)
+		}
+	} else {
+		prevChannel.RemoveVisitor(userID)
 	}
 }
 
@@ -114,7 +124,7 @@ func (w *Widget) RenameUserChannel(channelID, channelName string) {
 		return
 	}
 
-	w.GuildDB.SetUserChannel(userChan.owner.ID, userChan.ID, channelName)
+	w.GuildDB.SetUserChannel(userChan.ownerID, userChan.ID, channelName)
 	w.log.WithField("channelName", channelName).Debugln("New user channel name")
 }
 
@@ -164,9 +174,9 @@ func (w *Widget) newUserChannel(userID string) (*userChannel, error) {
 	}
 
 	return &userChannel{
-		Channel:  channel,
-		owner:    user,
-		Visitors: []string{},
+		Channel:    channel,
+		ownerID:    user.ID,
+		visitorIDs: []string{},
 	}, nil
 }
 
@@ -183,6 +193,20 @@ func userChannelData(channelName, userID, parentID string) discordgo.GuildChanne
 			},
 		},
 		ParentID: parentID,
+	}
+}
+
+func changeOwnerChannelData(channelName, ownerID string) *discordgo.ChannelEdit {
+	return &discordgo.ChannelEdit{
+		Name: channelName,
+		PermissionOverwrites: []*discordgo.PermissionOverwrite{
+			{
+				ID:    ownerID,
+				Type:  "member",
+				Allow: 16,
+				Deny:  0,
+			},
+		},
 	}
 }
 
