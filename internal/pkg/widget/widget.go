@@ -89,16 +89,6 @@ func (w *Widget) UserJoined(event *discordgo.VoiceStateUpdate) {
 	}
 }
 
-func (w *Widget) ChannelChangedEvent(channel *discordgo.Channel) {
-	if w.IsListenChannel(channel.ID) {
-		w.guildDB.SetChannelName(channel.Name)
-		w.log.WithField("channelName", channel.Name).Debugln("New listen channel name")
-	} else if userChan, ok := w.activeChannels[channel.ID]; ok {
-		w.guildDB.SetUserChannel(userChan.owner.ID, channel.ID, channel.Name)
-		w.log.WithField("channelName", channel.Name).Debugln("New user channel name")
-	}
-}
-
 func (w *Widget) UserLeft(userID string) {
 	prevChannel, ok := w.currentChannel[userID]
 	if !ok {
@@ -114,10 +104,6 @@ func (w *Widget) UserLeft(userID string) {
 	}
 }
 
-func (w *Widget) Close() {
-	w.session.ChannelDelete(w.listenChannel.ID)
-}
-
 func (w *Widget) UserRequestChannel(userID string) {
 	userChannel, err := w.newUserChannel(userID)
 	if err != nil {
@@ -127,6 +113,30 @@ func (w *Widget) UserRequestChannel(userID string) {
 
 	w.activeChannels[userChannel.ID] = userChannel
 	w.session.GuildMemberMove(userChannel.GuildID, userID, userChannel.ID)
+}
+
+func (w *Widget) ChannelChangedEvent(channel *discordgo.Channel) {
+	if w.IsListenChannel(channel.ID) {
+		w.guildDB.SetChannelName(channel.Name)
+		w.log.WithField("channelName", channel.Name).Debugln("New listen channel name")
+	} else if userChan, ok := w.activeChannels[channel.ID]; ok {
+		w.guildDB.SetUserChannel(userChan.owner.ID, channel.ID, channel.Name)
+		w.log.WithField("channelName", channel.Name).Debugln("New user channel name")
+	}
+}
+
+func (w *Widget) Close() {
+	w.session.ChannelDelete(w.listenChannel.ID)
+}
+
+// Returns true if the given `channel` is managed by this widget
+func (w *Widget) IsManaged(channel *discordgo.Channel) bool {
+	return channel.ParentID == w.categoryChannel.ID || channel.ID == w.categoryChannel.ID
+}
+
+// Returns true if the given `channelID` is the listen channel for this widget
+func (w *Widget) IsListenChannel(channelID string) bool {
+	return channelID == w.listenChannel.ID
 }
 
 // Create a new channel for user
@@ -156,16 +166,6 @@ func (w *Widget) newUserChannel(userID string) (*userChannel, error) {
 		owner:     user,
 		userCount: 0,
 	}, nil
-}
-
-// Returns true if the given `channel` is managed by this widget
-func (w *Widget) IsManaged(channel *discordgo.Channel) bool {
-	return channel.ParentID == w.categoryChannel.ID || channel.ID == w.categoryChannel.ID
-}
-
-// Returns true if the given `channelID` is the listen channel for this widget
-func (w *Widget) IsListenChannel(channelID string) bool {
-	return channelID == w.listenChannel.ID
 }
 
 func userChannelData(channelName, userID, parentID string) discordgo.GuildChannelCreateData {
