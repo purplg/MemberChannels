@@ -26,4 +26,4 @@ test:
 
 run:
 	${BUILD_CMD}
-	${BINARY}
+	${BINARY} -loglevel="DEBUG"

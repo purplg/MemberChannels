@@ -38,10 +38,15 @@ func startDiscordSession(token string, evnts *events.Events) (*discordgo.Session
 }
 
 func main() {
-	vars := environment.New(os.Getenv("DISCORD_TOKEN"))
 	logger := logrus.New()
 	log := logrus.NewEntry(logger)
-	log.Logger.SetLevel(logrus.DebugLevel)
+
+	vars, err := environment.New()
+	if err != nil {
+		log.WithError(err).Fatal()
+	}
+
+	log.Logger.SetLevel(vars.LogLevel)
 	data, err := database.Open(vars.DBFile, log)
 	if err != nil {
 		log.WithError(err).Fatalln()
