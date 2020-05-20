@@ -28,12 +28,6 @@ type Widget struct {
 	activeChannels map[string]*userChannel // map[channelID] -> userChannel
 }
 
-type userChannel struct {
-	*discordgo.Channel
-	owner     *discordgo.User
-	userCount uint8
-}
-
 // Only used to initialize a new Widget
 type WidgetData struct {
 	CategoryID        string
@@ -81,11 +75,10 @@ func (w *Widget) Spawn(data *WidgetData) error {
 }
 
 func (w *Widget) UserJoined(userID, channelID string) {
-	if existingChannel, ok := w.activeChannels[channelID]; ok {
-		w.log.Debugln("Joining existing channel")
-		w.currentChannel[userID] = existingChannel
-		existingChannel.userCount++
-		w.log.Debugf("UserCount: %d\n", existingChannel.userCount)
+	if activeChannel, ok := w.activeChannels[channelID]; ok {
+		w.currentChannel[userID] = activeChannel
+		activeChannel.AddVisitor(userID)
+		w.log.Debugf("VisitorCount: %d\n", len(activeChannel.Visitors))
 	}
 }
 
@@ -95,10 +88,10 @@ func (w *Widget) UserLeft(userID string) {
 		return
 	}
 
-	w.log.Debugf("Found previous channel: %d\n", prevChannel.userCount)
 	delete(w.currentChannel, userID)
-	prevChannel.userCount--
-	if prevChannel.userCount == 0 {
+	prevChannel.RemoveVisitor(userID)
+	w.log.Debugf("Found previous channel: %d\n", len(prevChannel.Visitors))
+	if len(prevChannel.Visitors) == 0 {
 		w.log.Debugln("Empty. Deleting")
 		w.session.ChannelDelete(prevChannel.ID)
 	}
@@ -171,9 +164,9 @@ func (w *Widget) newUserChannel(userID string) (*userChannel, error) {
 	}
 
 	return &userChannel{
-		Channel:   channel,
-		owner:     user,
-		userCount: 0,
+		Channel:  channel,
+		owner:    user,
+		Visitors: []string{},
 	}, nil
 }
 
