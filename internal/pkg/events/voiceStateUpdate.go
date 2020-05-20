@@ -23,7 +23,7 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 
 	if widget.IsListenChannel(event.ChannelID) {
 		widget.UserRequestChannel(event.UserID)
-	} else if widget.IsUserChannel(event.ChannelID) {
+	} else if widget.IsMemberChannel(event.ChannelID) {
 		widget.UserJoined(event.UserID, event.ChannelID)
 	}
 }

@@ -152,7 +152,7 @@ func (w *Widget) IsMemberChannel(channelID string) bool {
 }
 
 // Create a new channel for user
-func (w *Widget) newUserChannel(userID string) (*memberChannel, error) {
+func (w *Widget) newMemberChannel(userID string) (*memberChannel, error) {
 	// Look up the saved channel name for user
 	channelName := w.GuildDB.MemberChannelName(userID)
 

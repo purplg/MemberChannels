@@ -15,7 +15,7 @@ func (config *Events) ChannelUpdate(session *discordgo.Session, event *discordgo
 
 	if widget.IsListenChannel(event.Channel.ID) {
 		widget.RenameListenChannel(event.Channel.Name)
-	} else if widget.IsUserChannel(event.Channel.ID) {
-		widget.RenameUserChannel(event.Channel.ID, event.Channel.Name)
+	} else if widget.IsMemberChannel(event.Channel.ID) {
+		widget.RenameMemberChannel(event.Channel.ID, event.Channel.Name)
 	}
 }
