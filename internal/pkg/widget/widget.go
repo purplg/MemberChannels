@@ -80,10 +80,10 @@ func (w *Widget) Spawn(data *WidgetData) error {
 	return nil
 }
 
-func (w *Widget) UserJoined(event *discordgo.VoiceStateUpdate) {
-	if existingChannel, ok := w.activeChannels[event.ChannelID]; ok {
+func (w *Widget) UserJoined(userID, channelID string) {
+	if existingChannel, ok := w.activeChannels[channelID]; ok {
 		w.log.Debugln("Joining existing channel")
-		w.currentChannel[event.UserID] = existingChannel
+		w.currentChannel[userID] = existingChannel
 		existingChannel.userCount++
 		w.log.Debugf("UserCount: %d\n", existingChannel.userCount)
 	}
