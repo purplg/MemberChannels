@@ -10,4 +10,4 @@ services:
     env_file: .env
     volumes:
       - data:/dist/db
-    restart: always
+    restart: unless-stopped
