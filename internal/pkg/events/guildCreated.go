@@ -22,7 +22,7 @@ func (config *Events) GuildCreated(session *discordgo.Session, event *discordgo.
 	}
 
 	if widgetData.ListenChannelName == "" {
-		widgetData.ListenChannelName = config.Vars.DefaultChannelName
+		widgetData.ListenChannelName = config.Vars.DefaultListenName
 	}
 
 	widget := widget.New(session, log, guildDB)
