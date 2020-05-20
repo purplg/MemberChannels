@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +12,11 @@ import (
 	"purplg.com/memberchannels/internal/pkg/database"
 	"purplg.com/memberchannels/internal/pkg/environment"
 	"purplg.com/memberchannels/internal/pkg/events"
+)
+
+var (
+	BuildVersion string = ""
+	BuildTime    string = ""
 )
 
 func startDiscordSession(token string, evnts *events.Events) (*discordgo.Session, error) {
@@ -51,7 +57,8 @@ func main() {
 	}
 	defer session.Close()
 
-	log.Println("Bot is now running. Press CTRL-C to exit.")
+	fmt.Printf("Version: %s\tBuilt at: %s\n", BuildVersion, BuildTime)
+	fmt.Println("Bot is now running. Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
