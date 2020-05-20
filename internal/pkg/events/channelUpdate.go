@@ -9,7 +9,7 @@ func (config *Events) ChannelUpdate(session *discordgo.Session, event *discordgo
 	guildDB := config.DB.AsGuild(event.GuildID)
 
 	if widget, ok := config.Widgets[guildDB.GuildID()]; ok {
-		if widget.IsManagedChannel(event.Channel) {
+		if widget.IsManaged(event.Channel) {
 			widget.ChannelChangedEvent(event.Channel)
 		}
 	} else {
