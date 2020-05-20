@@ -6,13 +6,16 @@ import (
 
 func (config *Events) ChannelUpdate(session *discordgo.Session, event *discordgo.ChannelUpdate) {
 	log := config.Log.WithField("GuildID", event.GuildID)
-	guildDB := config.DB.AsGuild(event.GuildID)
 
-	if widget, ok := config.Widgets[guildDB.GuildID()]; ok {
-		if widget.IsManaged(event.Channel) {
-			widget.ChannelChangedEvent(event.Channel)
-		}
-	} else {
+	widget, ok := config.Widgets[event.GuildID]
+	if !ok {
 		log.Errorln("Could not find widget for guild")
+		return
+	}
+
+	if widget.IsListenChannel(event.Channel.ID) {
+		widget.RenameListenChannel(event.Channel.Name)
+	} else if widget.IsUserChannel(event.Channel.ID) {
+		widget.RenameUserChannel(event.Channel.ID, event.Channel.Name)
 	}
 }

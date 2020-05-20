@@ -19,7 +19,7 @@ import (
 type Widget struct {
 	session *discordgo.Session
 	log     *logrus.Entry
-	guildDB database.GuildDatabase
+	GuildDB database.GuildDatabase
 
 	categoryChannel *discordgo.Channel
 	listenChannel   *discordgo.Channel
@@ -46,7 +46,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 	return &Widget{
 		session:         session,
 		log:             log,
-		guildDB:         guildDB,
+		GuildDB:         guildDB,
 		categoryChannel: nil,
 		listenChannel:   nil,
 		currentChannel:  make(map[string]*userChannel),
@@ -59,23 +59,23 @@ func (w *Widget) Spawn(data *WidgetData) error {
 
 	// Resolve existing categoryChannel or create a new one
 	if w.categoryChannel, err = w.session.Channel(data.CategoryID); err != nil {
-		w.categoryChannel, err = w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), categoryChannelData(data.CategoryName))
+		w.categoryChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), categoryChannelData(data.CategoryName))
 		if err != nil {
 			return err
 		}
 	}
 
 	if w.listenChannel, err = w.session.Channel(data.ListenChannelID); err != nil {
-		w.listenChannel, err = w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), listenChannelData(data.ListenChannelName, w.categoryChannel.ID))
+		w.listenChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), listenChannelData(data.ListenChannelName, w.categoryChannel.ID))
 		if err != nil {
 			return err
 		}
 	}
 
-	w.guildDB.SetCategoryID(w.categoryChannel.ID)
-	w.guildDB.SetCategoryName(w.categoryChannel.Name)
-	w.guildDB.SetChannelID(w.listenChannel.ID)
-	w.guildDB.SetChannelName(w.listenChannel.Name)
+	w.GuildDB.SetCategoryID(w.categoryChannel.ID)
+	w.GuildDB.SetCategoryName(w.categoryChannel.Name)
+	w.GuildDB.SetChannelID(w.listenChannel.ID)
+	w.GuildDB.SetChannelName(w.listenChannel.Name)
 
 	return nil
 }
@@ -115,23 +115,22 @@ func (w *Widget) UserRequestChannel(userID string) {
 	w.session.GuildMemberMove(userChannel.GuildID, userID, userChannel.ID)
 }
 
-func (w *Widget) ChannelChangedEvent(channel *discordgo.Channel) {
-	if w.IsListenChannel(channel.ID) {
-		w.guildDB.SetChannelName(channel.Name)
-		w.log.WithField("channelName", channel.Name).Debugln("New listen channel name")
-	} else if userChan, ok := w.activeChannels[channel.ID]; ok {
-		w.guildDB.SetUserChannel(userChan.owner.ID, channel.ID, channel.Name)
-		w.log.WithField("channelName", channel.Name).Debugln("New user channel name")
+func (w *Widget) RenameUserChannel(channelID, channelName string) {
+	userChan, ok := w.activeChannels[channelID]
+	if !ok {
+		return
 	}
+
+	w.GuildDB.SetUserChannel(userChan.owner.ID, userChan.ID, channelName)
+	w.log.WithField("channelName", channelName).Debugln("New user channel name")
+}
+
+func (w *Widget) RenameListenChannel(channelName string) {
+	w.GuildDB.SetChannelName(channelName)
 }
 
 func (w *Widget) Close() {
 	w.session.ChannelDelete(w.listenChannel.ID)
-}
-
-// Returns true if the given `channel` is managed by this widget
-func (w *Widget) IsManaged(channel *discordgo.Channel) bool {
-	return channel.ParentID == w.categoryChannel.ID || channel.ID == w.categoryChannel.ID
 }
 
 // Returns true if the given `channelID` is the listen channel for this widget
@@ -139,10 +138,20 @@ func (w *Widget) IsListenChannel(channelID string) bool {
 	return channelID == w.listenChannel.ID
 }
 
+// Returns true if the given `channelID` is a managed user channel for this widget
+func (w *Widget) IsUserChannel(channelID string) bool {
+	for activeID := range w.activeChannels {
+		if channelID == activeID {
+			return true
+		}
+	}
+	return false
+}
+
 // Create a new channel for user
 func (w *Widget) newUserChannel(userID string) (*userChannel, error) {
 	// Look up the saved channel name for user
-	channelName := w.guildDB.UserChannelName(userID)
+	channelName := w.GuildDB.UserChannelName(userID)
 
 	user, err := w.session.User(userID)
 	if err != nil {
@@ -156,7 +165,7 @@ func (w *Widget) newUserChannel(userID string) (*userChannel, error) {
 	}
 
 	// Send API request to create the voice channel
-	channel, err := w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), userChannelData(channelName, userID, w.categoryChannel.ID))
+	channel, err := w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), userChannelData(channelName, userID, w.categoryChannel.ID))
 	if err != nil {
 		return nil, err
 	}
