@@ -124,7 +124,7 @@ func (w *Widget) RenameMemberChannel(channelID, channelName string) {
 		return
 	}
 
-	w.GuildDB.SetMemberChannel(memberChan.ownerID, memberChan.ID, channelName)
+	w.GuildDB.SetMemberChannel(memberChan.ownerID, channelName)
 	w.log.WithField("channelName", channelName).Debugln("New member channel name")
 }
 

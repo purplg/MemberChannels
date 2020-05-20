@@ -7,9 +7,6 @@ import (
 
 // Field names
 const (
-	channelPrefix = "CHAN_"
-	C_OWNER       = channelPrefix + "owner"
-
 	userPrefix    = "USER_"
 	U_CHANNELNAME = userPrefix + "channelName"
 
@@ -26,7 +23,7 @@ type GuildDatabase interface {
 
 	// User data
 	MemberChannelName(userID string) string
-	SetMemberChannel(userid, channelID, channelName string)
+	SetMemberChannel(userid, channelName string)
 
 	// * Guild data
 	CategoryID() string
@@ -63,9 +60,8 @@ func (g guildDB) MemberChannelName(userID string) string {
 	return g.getValue(U_CHANNELNAME + userID)
 }
 
-func (g guildDB) SetMemberChannel(userID string, channelID string, channelName string) {
+func (g guildDB) SetMemberChannel(userID string, channelName string) {
 	g.setValue(U_CHANNELNAME+userID, channelName)
-	g.setValue(C_OWNER+channelID, userID)
 }
 
 // -----------------------------------------------------------------------------
