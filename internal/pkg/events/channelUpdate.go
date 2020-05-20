@@ -10,7 +10,7 @@ func (config *Events) ChannelUpdate(session *discordgo.Session, event *discordgo
 
 	if widget, ok := config.Widgets[guildDB.GuildID()]; ok {
 		if widget.IsManagedChannel(event.Channel) {
-			widget.ChannelChanged(event.Channel)
+			widget.ChannelChangedEvent(event.Channel)
 		}
 	} else {
 		log.Errorln("Could not find widget for guild")

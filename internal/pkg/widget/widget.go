@@ -43,7 +43,7 @@ func (w *Widget) UserVoiceEvent(event *discordgo.VoiceStateUpdate) {
 	}
 }
 
-func (w *Widget) ChannelChanged(channel *discordgo.Channel) {
+func (w *Widget) ChannelChangedEvent(channel *discordgo.Channel) {
 	if w.isListenChannel(channel) {
 		w.guildDB.SetChannelName(channel.Name)
 		w.log.WithField("channelName", channel.Name).Debugln("New listen channel name")
