@@ -97,7 +97,7 @@ func (w *Widget) UserLeft(userID string) {
 		if prevChannel.PopToOwner() {
 			w.log.Debugln("Popping to new owner")
 			channelName := w.GuildDB.MemberChannelName(prevChannel.ownerID)
-			w.session.ChannelEditComplex(prevChannel.ID, changeOwnerChannelData(channelName, prevChannel.ownerID))
+			w.session.ChannelEditComplex(prevChannel.ID, changeOwnerChannelData(channelName, prevChannel.ownerID, prevChannel.Position))
 		} else {
 			w.log.Debugln("Empty. Deleting")
 			w.session.ChannelDelete(prevChannel.ID)
@@ -196,9 +196,10 @@ func memberChannelData(channelName, userID, parentID string) discordgo.GuildChan
 	}
 }
 
-func changeOwnerChannelData(channelName, ownerID string) *discordgo.ChannelEdit {
+func changeOwnerChannelData(channelName, ownerID string, position int) *discordgo.ChannelEdit {
 	return &discordgo.ChannelEdit{
 		Name: channelName,
+		Position: position,
 		PermissionOverwrites: []*discordgo.PermissionOverwrite{
 			{
 				ID:    ownerID,
