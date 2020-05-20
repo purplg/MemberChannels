@@ -1,13 +1,13 @@
 version: "3.5"
 
 volumes:
-  memberchannels_data:
+  data:
 
 services:
   memberchannels:
-    image: memberchannels:latest
+    image: purplg/memberchannels:latest
     container_name: "memberchannels"
     env_file: .env
     volumes:
-      - memberchannels_data:/dist/db
+      - data:/dist/db
     restart: always
