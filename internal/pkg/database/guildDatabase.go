@@ -61,19 +61,11 @@ func (g guildDB) GuildID() string {
 // User data
 // -----------------------------------------------------------------------------
 func (g guildDB) ChannelOwner(channelID string) string {
-	value, err := g.getValue(C_OWNER + channelID)
-	if err != nil {
-		return ""
-	}
-	return value
+	return g.getValue(C_OWNER + channelID)
 }
 
 func (g guildDB) MemberChannelName(userID string) string {
-	value, err := g.getValue(U_CHANNELNAME + userID)
-	if err != nil {
-		return ""
-	}
-	return value
+	return g.getValue(U_CHANNELNAME + userID)
 }
 
 func (g guildDB) SetMemberChannel(userID string, channelID string, channelName string) {
@@ -85,35 +77,19 @@ func (g guildDB) SetMemberChannel(userID string, channelID string, channelName s
 // Guild data
 // -----------------------------------------------------------------------------
 func (g guildDB) CategoryID() string {
-	value, err := g.getValue(G_CATEGORYID)
-	if err != nil {
-		return ""
-	}
-	return value
+	return g.getValue(G_CATEGORYID)
 }
 
 func (g guildDB) CategoryName() string {
-	value, err := g.getValue(G_CATEGORYNAME)
-	if err != nil {
-		return ""
-	}
-	return value
+	return g.getValue(G_CATEGORYNAME)
 }
 
 func (g guildDB) ChannelID() string {
-	value, err := g.getValue(G_CHANNELID)
-	if err != nil {
-		return ""
-	}
-	return value
+	return g.getValue(G_CHANNELID)
 }
 
 func (g guildDB) ChannelName() string {
-	value, err := g.getValue(G_CHANNELNAME)
-	if err != nil {
-		return ""
-	}
-	return value
+	return g.getValue(G_CHANNELNAME)
 }
 
 func (g guildDB) SetCategoryID(value string) {
@@ -135,7 +111,7 @@ func (g guildDB) SetChannelName(value string) {
 // -----------------------------------------------------------------------------
 // Util functions
 // -----------------------------------------------------------------------------
-func (g guildDB) getValue(key string) (string, error) {
+func (g guildDB) getValue(key string) string {
 	var value string
 	if err := g.View(
 		func(tx *nutsdb.Tx) error {
@@ -146,10 +122,10 @@ func (g guildDB) getValue(key string) (string, error) {
 				return nil
 			}
 		}); err != nil {
-		return "", err
+		return ""
 	}
 
-	return value, nil
+	return value
 }
 
 func (g guildDB) setValue(key string, value string) {
