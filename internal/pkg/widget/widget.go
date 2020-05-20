@@ -21,7 +21,7 @@ func (w *Widget) UserVoiceEvent(event *discordgo.VoiceStateUpdate) {
 
 	if prevChannel, ok := w.currentChannel[event.UserID]; ok {
 		w.log.Debugf("Found previous channel: %d\n", prevChannel.userCount)
-		w.UserLeftChannel(event.UserID, prevChannel)
+		w.userLeftChannel(event.UserID, prevChannel)
 	}
 
 	if event.ChannelID == "" {
@@ -31,39 +31,16 @@ func (w *Widget) UserVoiceEvent(event *discordgo.VoiceStateUpdate) {
 	// Create new
 	if event.ChannelID == w.listenChannel.ID {
 		w.log.Debugln("Creating new channel")
-		w.UserNewChannel(event.UserID)
+		w.userNewChannel(event.UserID)
 		return
 	}
 
 	// Join
 	if existingChannel, ok := w.activeChannels[event.ChannelID]; ok {
 		w.log.Debugln("Joining existing channel")
-		w.UserJoinedChannel(event.UserID, existingChannel)
+		w.userJoinedChannel(event.UserID, existingChannel)
 		w.log.Debugf("UserCount: %d\n", existingChannel.userCount)
 	}
-}
-
-func (w *Widget) UserLeftChannel(userID string, uc *userChannel) {
-	delete(w.currentChannel, userID)
-	uc.userCount--
-	if uc.userCount == 0 {
-		w.log.Debugln("Empty. Deleting")
-		w.session.ChannelDelete(uc.ID)
-	}
-}
-
-func (w *Widget) UserNewChannel(userID string) {
-	if userChannel, err := w.newUserChannel(userID); err != nil {
-		w.log.WithError(err).Errorln("Error creating new user channel")
-	} else {
-		w.activeChannels[userChannel.ID] = userChannel
-		w.session.GuildMemberMove(userChannel.GuildID, userID, userChannel.ID)
-	}
-}
-
-func (w *Widget) UserJoinedChannel(userID string, uc *userChannel) {
-	w.currentChannel[userID] = uc
-	uc.userCount++
 }
 
 func (w *Widget) ChannelChanged(channel *discordgo.Channel) {
@@ -74,6 +51,29 @@ func (w *Widget) ChannelChanged(channel *discordgo.Channel) {
 		w.guildDB.SetUserChannel(userChan.owner.ID, channel.ID, channel.Name)
 		w.log.WithField("channelName", channel.Name).Debugln("New user channel name")
 	}
+}
+
+func (w *Widget) userLeftChannel(userID string, uc *userChannel) {
+	delete(w.currentChannel, userID)
+	uc.userCount--
+	if uc.userCount == 0 {
+		w.log.Debugln("Empty. Deleting")
+		w.session.ChannelDelete(uc.ID)
+	}
+}
+
+func (w *Widget) userNewChannel(userID string) {
+	if userChannel, err := w.newUserChannel(userID); err != nil {
+		w.log.WithError(err).Errorln("Error creating new user channel")
+	} else {
+		w.activeChannels[userChannel.ID] = userChannel
+		w.session.GuildMemberMove(userChannel.GuildID, userID, userChannel.ID)
+	}
+}
+
+func (w *Widget) userJoinedChannel(userID string, uc *userChannel) {
+	w.currentChannel[userID] = uc
+	uc.userCount++
 }
 
 func (w *Widget) IsManagedChannel(channel *discordgo.Channel) bool {
