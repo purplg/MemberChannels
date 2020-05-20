@@ -43,8 +43,8 @@ type WidgetData struct {
 }
 
 // Just initialize values to prepare the widget
-func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase, data *WidgetData) (*Widget, error) {
-	w := &Widget{
+func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase) *Widget {
+	return &Widget{
 		session:         session,
 		log:             log,
 		guildDB:         guildDB,
@@ -53,21 +53,23 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 		currentChannel:  make(map[string]*userChannel),
 		activeChannels:  make(map[string]*userChannel),
 	}
+}
 
+func (w *Widget) Spawn(data *WidgetData) error {
 	var err error
 
 	// Resolve existing categoryChannel or create a new one
 	if w.categoryChannel, err = w.session.Channel(data.CategoryID); err != nil {
 		w.categoryChannel, err = w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), categoryChannelData(data.CategoryName))
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	if w.listenChannel, err = w.session.Channel(data.ListenChannelID); err != nil {
 		w.listenChannel, err = w.session.GuildChannelCreateComplex(w.guildDB.GuildID(), listenChannelData(data.ListenChannelName, w.categoryChannel.ID))
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -76,7 +78,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 	w.guildDB.SetChannelID(w.listenChannel.ID)
 	w.guildDB.SetChannelName(w.listenChannel.Name)
 
-	return w, nil
+	return nil
 }
 
 func (w *Widget) UserVoiceEvent(event *discordgo.VoiceStateUpdate) {
@@ -198,8 +200,8 @@ func userChannelData(channelName, userID, parentID string) discordgo.GuildChanne
 
 func categoryChannelData(channelName string) discordgo.GuildChannelCreateData {
 	return discordgo.GuildChannelCreateData{
-		Name:      channelName,
-		Type:      discordgo.ChannelTypeGuildCategory,
+		Name: channelName,
+		Type: discordgo.ChannelTypeGuildCategory,
 	}
 }
 

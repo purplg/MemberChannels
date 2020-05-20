@@ -25,9 +25,11 @@ func (config *Events) GuildCreated(session *discordgo.Session, event *discordgo.
 		widgetData.ListenChannelName = config.Vars.DefaultChannelName
 	}
 
-	if w, err := widget.New(session, log, guildDB, widgetData); err != nil {
-		log.WithError(err).Warnln("Error creating widget")
+	widget := widget.New(session, log, guildDB)
+
+	if err := widget.Spawn(widgetData); err != nil {
+		log.WithError(err).Warnln("Error spawning widget")
 	} else {
-		config.Widgets[guildDB.GuildID()] = w
+		config.Widgets[guildDB.GuildID()] = widget
 	}
 }
