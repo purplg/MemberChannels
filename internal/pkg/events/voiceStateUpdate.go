@@ -9,9 +9,21 @@ func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discor
 
 	guildDB := config.DB.AsGuild(event.GuildID)
 
-	if widget, ok := config.Widgets[guildDB.GuildID()]; ok {
-		widget.UserVoiceEvent(event)
-	} else {
+	widget, ok := config.Widgets[guildDB.GuildID()]
+	if !ok {
 		log.Errorln("Could not find widget for guild")
+		return
+	}
+
+	widget.UserLeft(event.UserID)
+
+	if event.ChannelID == "" {
+		return
+	}
+
+	if widget.IsListenChannel(event.ChannelID) {
+		widget.UserRequestChannel(event.UserID)
+	} else {
+		widget.UserJoined(event)
 	}
 }

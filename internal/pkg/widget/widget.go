@@ -42,7 +42,6 @@ type WidgetData struct {
 	ListenChannelName string
 }
 
-// Just initialize values to prepare the widget
 func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase) *Widget {
 	return &Widget{
 		session:         session,
@@ -81,35 +80,17 @@ func (w *Widget) Spawn(data *WidgetData) error {
 	return nil
 }
 
-func (w *Widget) UserVoiceEvent(event *discordgo.VoiceStateUpdate) {
-	w.log.Debugln("UserVoiceEvent")
-
-	if prevChannel, ok := w.currentChannel[event.UserID]; ok {
-		w.log.Debugf("Found previous channel: %d\n", prevChannel.userCount)
-		w.userLeftChannel(event.UserID, prevChannel)
-	}
-
-	if event.ChannelID == "" {
-		return
-	}
-
-	// Create new
-	if event.ChannelID == w.listenChannel.ID {
-		w.log.Debugln("Creating new channel")
-		w.userNewChannel(event.UserID)
-		return
-	}
-
-	// Join
+func (w *Widget) UserJoined(event *discordgo.VoiceStateUpdate) {
 	if existingChannel, ok := w.activeChannels[event.ChannelID]; ok {
 		w.log.Debugln("Joining existing channel")
-		w.userJoinedChannel(event.UserID, existingChannel)
+		w.currentChannel[event.UserID] = existingChannel
+		existingChannel.userCount++
 		w.log.Debugf("UserCount: %d\n", existingChannel.userCount)
 	}
 }
 
 func (w *Widget) ChannelChangedEvent(channel *discordgo.Channel) {
-	if w.isListenChannel(channel) {
+	if w.IsListenChannel(channel.ID) {
 		w.guildDB.SetChannelName(channel.Name)
 		w.log.WithField("channelName", channel.Name).Debugln("New listen channel name")
 	} else if userChan, ok := w.activeChannels[channel.ID]; ok {
@@ -118,39 +99,38 @@ func (w *Widget) ChannelChangedEvent(channel *discordgo.Channel) {
 	}
 }
 
-func (w *Widget) IsManaged(channel *discordgo.Channel) bool {
-	return channel.ParentID == w.categoryChannel.ID
+func (w *Widget) UserLeft(userID string) {
+	prevChannel, ok := w.currentChannel[userID]
+	if !ok {
+		return
+	}
+
+	w.log.Debugf("Found previous channel: %d\n", prevChannel.userCount)
+	delete(w.currentChannel, userID)
+	prevChannel.userCount--
+	if prevChannel.userCount == 0 {
+		w.log.Debugln("Empty. Deleting")
+		w.session.ChannelDelete(prevChannel.ID)
+	}
 }
 
 func (w *Widget) Close() {
 	w.session.ChannelDelete(w.listenChannel.ID)
 }
 
-func (w *Widget) userLeftChannel(userID string, uc *userChannel) {
-	delete(w.currentChannel, userID)
-	uc.userCount--
-	if uc.userCount == 0 {
-		w.log.Debugln("Empty. Deleting")
-		w.session.ChannelDelete(uc.ID)
-	}
-}
-
-func (w *Widget) userNewChannel(userID string) {
-	if userChannel, err := w.createUserChannel(userID); err != nil {
+func (w *Widget) UserRequestChannel(userID string) {
+	userChannel, err := w.newUserChannel(userID)
+	if err != nil {
 		w.log.WithError(err).Errorln("Error creating new user channel")
-	} else {
-		w.activeChannels[userChannel.ID] = userChannel
-		w.session.GuildMemberMove(userChannel.GuildID, userID, userChannel.ID)
+		return
 	}
-}
 
-func (w *Widget) userJoinedChannel(userID string, uc *userChannel) {
-	w.currentChannel[userID] = uc
-	uc.userCount++
+	w.activeChannels[userChannel.ID] = userChannel
+	w.session.GuildMemberMove(userChannel.GuildID, userID, userChannel.ID)
 }
 
 // Create a new channel for user
-func (w *Widget) createUserChannel(userID string) (*userChannel, error) {
+func (w *Widget) newUserChannel(userID string) (*userChannel, error) {
 	// Look up the saved channel name for user
 	channelName := w.guildDB.UserChannelName(userID)
 
@@ -178,8 +158,14 @@ func (w *Widget) createUserChannel(userID string) (*userChannel, error) {
 	}, nil
 }
 
-func (w *Widget) isListenChannel(channel *discordgo.Channel) bool {
-	return channel.ID == w.listenChannel.ID
+// Returns true if the given `channel` is managed by this widget
+func (w *Widget) IsManaged(channel *discordgo.Channel) bool {
+	return channel.ParentID == w.categoryChannel.ID || channel.ID == w.categoryChannel.ID
+}
+
+// Returns true if the given `channelID` is the listen channel for this widget
+func (w *Widget) IsListenChannel(channelID string) bool {
+	return channelID == w.listenChannel.ID
 }
 
 func userChannelData(channelName, userID, parentID string) discordgo.GuildChannelCreateData {
