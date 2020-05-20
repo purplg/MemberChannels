@@ -25,7 +25,6 @@ type GuildDatabase interface {
 	GuildID() string
 
 	// User data
-	ChannelOwner(channelID string) string
 	MemberChannelName(userID string) string
 	SetMemberChannel(userid, channelID, channelName string)
 
@@ -60,10 +59,6 @@ func (g guildDB) GuildID() string {
 // -----------------------------------------------------------------------------
 // User data
 // -----------------------------------------------------------------------------
-func (g guildDB) ChannelOwner(channelID string) string {
-	return g.getValue(C_OWNER + channelID)
-}
-
 func (g guildDB) MemberChannelName(userID string) string {
 	return g.getValue(U_CHANNELNAME + userID)
 }
