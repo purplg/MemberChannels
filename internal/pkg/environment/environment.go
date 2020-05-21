@@ -45,11 +45,12 @@ func (env *Environment) required() error {
 }
 
 func (env *Environment) optional() {
-	env.LogLevel = parseLogLevel(*flag.String("loglevel", "WARN", "(DEBUG|INFO|WARN|ERROR)"))
+	loglevel := flag.String("loglevel", "WARN", "(DEBUG|INFO|WARN|ERROR)")
 	flag.StringVar(&env.DBFile, "store-dir", defaultDBDirectory, "Directory to save database")
 	flag.StringVar(&env.DefaultCategoryName, "category-channel-name", defaultCategoryName, "The default name for created the created cateogories")
 	flag.StringVar(&env.DefaultListenName, "listen-channel-name", defaultListenName, "The default name for created the created cateogories")
 	flag.Parse()
+	env.LogLevel = parseLogLevel(*loglevel)
 }
 
 func parseLogLevel(level string) logrus.Level {
