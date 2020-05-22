@@ -13,7 +13,6 @@ func (config *Events) GuildCreated(session *discordgo.Session, event *discordgo.
 	widgetData := &widget.WidgetData{
 		CategoryID:        guildDB.CategoryID(),
 		CategoryName:      guildDB.CategoryName(),
-		ListenChannelID:   guildDB.ChannelID(),
 		ListenChannelName: guildDB.ChannelName(),
 	}
 

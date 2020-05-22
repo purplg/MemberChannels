@@ -34,7 +34,6 @@ type Widget struct {
 type WidgetData struct {
 	CategoryID        string
 	CategoryName      string
-	ListenChannelID   string
 	ListenChannelName string
 }
 
@@ -62,11 +61,9 @@ func (w *Widget) Spawn(data *WidgetData) error {
 		}
 	}
 
-	if w.listenChannel, err = w.session.Channel(data.ListenChannelID); err != nil {
-		w.listenChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), listenChannelData(data.ListenChannelName, w.categoryChannel.ID))
-		if err != nil {
-			return err
-		}
+	w.listenChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), listenChannelData(data.ListenChannelName, w.categoryChannel.ID))
+	if err != nil {
+		return err
 	}
 
 	w.GuildDB.SetCategoryID(w.categoryChannel.ID)
