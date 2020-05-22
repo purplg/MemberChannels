@@ -7,6 +7,7 @@ services:
   memberchannels:
     image: purplg/memberchannels:latest
     container_name: "memberchannels"
+    command: -v
     env_file: .env
     volumes:
       - data:/dist/db

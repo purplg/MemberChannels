@@ -21,4 +21,4 @@ WORKDIR /dist
 
 RUN cp /build/bin/main .
 
-CMD ["./main"]
+ENTRYPOINT "./main"
