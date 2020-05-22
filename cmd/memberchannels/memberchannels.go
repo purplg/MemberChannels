@@ -46,7 +46,10 @@ func main() {
 		log.WithError(err).Fatal()
 	}
 
-	log.Logger.SetLevel(vars.LogLevel)
+	if vars.Verbose {
+		log.Logger.SetLevel(logrus.DebugLevel)
+	}
+
 	data, err := database.Open(vars.DBFile, log)
 	if err != nil {
 		log.WithError(err).Fatalln()
