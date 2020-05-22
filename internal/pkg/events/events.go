@@ -1,6 +1,7 @@
 package events
 
 import (
+	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 
 	"purplg.com/memberchannels/internal/pkg/database"
@@ -9,18 +10,20 @@ import (
 )
 
 type Events struct {
-	Vars    *environment.Environment
-	Log     *logrus.Entry
-	DB      *database.DB
-	Widgets map[string]*widget.Widget
+	Vars            *environment.Environment
+	Log             *logrus.Entry
+	DB              *database.DB
+	Widgets         map[string]*widget.Widget
+	voiceStateCache map[string]*discordgo.VoiceState
 }
 
 func New(vars *environment.Environment, log *logrus.Entry, db *database.DB) *Events {
 	return &Events{
-		Vars:    vars,
-		Log:     log,
-		DB:      db,
-		Widgets: make(map[string]*widget.Widget),
+		Vars:            vars,
+		Log:             log,
+		DB:              db,
+		Widgets:         make(map[string]*widget.Widget),
+		voiceStateCache: make(map[string]*discordgo.VoiceState),
 	}
 }
 

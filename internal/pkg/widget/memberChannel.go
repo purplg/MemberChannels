@@ -1,11 +1,7 @@
 package widget
 
-import (
-	"github.com/bwmarrin/discordgo"
-)
-
 type memberChannel struct {
-	*discordgo.Channel
+	ID  string
 	ownerID    string
 	visitorIDs []string
 }

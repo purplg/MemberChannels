@@ -30,6 +30,6 @@ func (config *Events) GuildCreated(session *discordgo.Session, event *discordgo.
 	if err := widget.Spawn(widgetData); err != nil {
 		log.WithError(err).Warnln("Error spawning widget")
 	} else {
-		config.Widgets[guildDB.GuildID()] = widget
+		config.Widgets[event.Guild.ID] = widget
 	}
 }

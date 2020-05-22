@@ -7,20 +7,22 @@ import (
 func (config *Events) VoiceStateUpdate(session *discordgo.Session, event *discordgo.VoiceStateUpdate) {
 	log := config.Log.WithField("GuildID", event.GuildID)
 
-	guildDB := config.DB.AsGuild(event.GuildID)
+	lastVoiceState := config.voiceStateCache[event.UserID]
+	config.voiceStateCache[event.UserID] = event.VoiceState
 
-	widget, ok := config.Widgets[guildDB.GuildID()]
-	if !ok {
+	widget := config.Widgets[event.GuildID]
+	if widget == nil {
 		log.Errorln("Could not find widget for guild")
 		return
 	}
 
-	widget.UserLeft(event.UserID)
-
-	if event.ChannelID == "" {
-		return
+	// Check if user left a previously member channel
+	userLeftChannel := lastVoiceState != nil && lastVoiceState.ChannelID != event.ChannelID
+	if userLeftChannel && widget.IsMemberChannel(lastVoiceState.ChannelID) {
+		widget.UserLeft(event.UserID, lastVoiceState.ChannelID)
 	}
 
+	// Join new channel
 	if widget.IsListenChannel(event.ChannelID) {
 		widget.UserRequestChannel(event.UserID)
 	} else if widget.IsMemberChannel(event.ChannelID) {

@@ -21,6 +21,8 @@ type Widget struct {
 	log     *logrus.Entry
 	GuildDB database.GuildDatabase
 
+	guildID string
+
 	categoryChannel *discordgo.Channel
 	listenChannel   *discordgo.Channel
 
@@ -41,6 +43,7 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 		session:         session,
 		log:             log,
 		GuildDB:         guildDB,
+		guildID:         guildDB.GuildID(),
 		categoryChannel: nil,
 		listenChannel:   nil,
 		currentChannel:  make(map[string]*memberChannel),
@@ -84,26 +87,27 @@ func (w *Widget) UserJoined(userID, channelID string) {
 	}
 }
 
-func (w *Widget) UserLeft(userID string) {
-	prevChannel, ok := w.currentChannel[userID]
-	if !ok {
-		return
-	}
+func (w *Widget) UserLeft(userID, channelID string) {
+	channel := w.activeChannels[channelID]
 
 	delete(w.currentChannel, userID)
 
-	if prevChannel.ownerID == userID {
+	if channel == nil {
+		return
+	}
+
+	if channel.ownerID == userID {
 		w.log.Debugln("User is owner")
-		if prevChannel.PopToOwner() {
+		if channel.PopToOwner() {
 			w.log.Debugln("Popping to new owner")
-			channelName := w.GuildDB.MemberChannelName(prevChannel.ownerID)
-			w.session.ChannelEditComplex(prevChannel.ID, changeOwnerChannelData(channelName, prevChannel.ownerID, prevChannel.Position))
+			channelName := w.GuildDB.MemberChannelName(channel.ownerID)
+			w.session.ChannelEditComplex(channel.ID, changeOwnerChannelData(channelName, channel.ownerID, 99))
 		} else {
 			w.log.Debugln("Empty. Deleting")
-			w.session.ChannelDelete(prevChannel.ID)
+			w.session.ChannelDelete(channel.ID)
 		}
 	} else {
-		prevChannel.RemoveVisitor(userID)
+		channel.RemoveVisitor(userID)
 	}
 }
 
@@ -115,7 +119,7 @@ func (w *Widget) UserRequestChannel(userID string) {
 	}
 
 	w.activeChannels[memberChannel.ID] = memberChannel
-	w.session.GuildMemberMove(memberChannel.GuildID, userID, memberChannel.ID)
+	w.session.GuildMemberMove(w.guildID, userID, memberChannel.ID)
 }
 
 func (w *Widget) RenameMemberChannel(channelID, channelName string) {
@@ -174,7 +178,7 @@ func (w *Widget) newMemberChannel(userID string) (*memberChannel, error) {
 	}
 
 	return &memberChannel{
-		Channel:    channel,
+		ID:         channel.ID,
 		ownerID:    user.ID,
 		visitorIDs: []string{},
 	}, nil
@@ -198,7 +202,7 @@ func memberChannelData(channelName, userID, parentID string) discordgo.GuildChan
 
 func changeOwnerChannelData(channelName, ownerID string, position int) *discordgo.ChannelEdit {
 	return &discordgo.ChannelEdit{
-		Name: channelName,
+		Name:     channelName,
 		Position: position,
 		PermissionOverwrites: []*discordgo.PermissionOverwrite{
 			{
