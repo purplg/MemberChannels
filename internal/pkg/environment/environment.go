@@ -8,8 +8,8 @@ import (
 
 const (
 	defaultDBDirectory  = "./db"
-	defaultCategoryName = "Dynamic Channels"
-	defaultListenName   = "[ + ] [ Create channel ]"
+	defaultCategoryName = "Member Channels"
+	defaultListenName   = "[ + New ]"
 )
 
 type Environment struct {
