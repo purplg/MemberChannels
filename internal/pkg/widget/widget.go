@@ -30,13 +30,6 @@ type Widget struct {
 	activeChannels map[string]*memberChannel // map[channelID] -> memberChannel
 }
 
-// Only used to initialize a new Widget
-type WidgetData struct {
-	CategoryID        string
-	CategoryName      string
-	ListenChannelName string
-}
-
 func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDatabase) *Widget {
 	return &Widget{
 		session:         session,
@@ -50,18 +43,18 @@ func New(session *discordgo.Session, log *logrus.Entry, guildDB database.GuildDa
 	}
 }
 
-func (w *Widget) Spawn(data *WidgetData) error {
+func (w *Widget) Spawn(categoryID, categoryName, listenChannelName string) error {
 	var err error
 
 	// Resolve existing categoryChannel or create a new one
-	if w.categoryChannel, err = w.session.Channel(data.CategoryID); err != nil {
-		w.categoryChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), categoryChannelData(data.CategoryName))
+	if w.categoryChannel, err = w.session.Channel(categoryID); err != nil {
+		w.categoryChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), categoryChannelData(categoryName))
 		if err != nil {
 			return err
 		}
 	}
 
-	w.listenChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), listenChannelData(data.ListenChannelName, w.categoryChannel.ID))
+	w.listenChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), listenChannelData(listenChannelName, w.categoryChannel.ID))
 	if err != nil {
 		return err
 	}

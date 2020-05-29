@@ -10,23 +10,21 @@ func (config *Events) GuildCreated(session *discordgo.Session, event *discordgo.
 
 	guildDB := config.DB.AsGuild(event.Guild.ID)
 
-	widgetData := &widget.WidgetData{
-		CategoryID:        guildDB.CategoryID(),
-		CategoryName:      guildDB.CategoryName(),
-		ListenChannelName: guildDB.ChannelName(),
+	categoryID := guildDB.CategoryID()
+	categoryName := guildDB.CategoryName()
+	listenChannelName := guildDB.ChannelName()
+
+	if categoryName == "" {
+		categoryName = config.Vars.DefaultCategoryName
 	}
 
-	if widgetData.CategoryName == "" {
-		widgetData.CategoryName = config.Vars.DefaultCategoryName
-	}
-
-	if widgetData.ListenChannelName == "" {
-		widgetData.ListenChannelName = config.Vars.DefaultListenName
+	if listenChannelName == "" {
+		listenChannelName = config.Vars.DefaultListenName
 	}
 
 	widget := widget.New(session, log, guildDB)
 
-	if err := widget.Spawn(widgetData); err != nil {
+	if err := widget.Spawn(categoryID, categoryName, listenChannelName); err != nil {
 		log.WithError(err).Warnln("Error spawning widget")
 	} else {
 		config.Widgets[event.Guild.ID] = widget
