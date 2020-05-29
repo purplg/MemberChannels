@@ -47,11 +47,17 @@ func (w *Widget) Spawn(categoryID, categoryName, listenChannelName string) error
 	var err error
 
 	// Resolve existing categoryChannel or create a new one
-	if w.categoryChannel, err = w.session.Channel(categoryID); err != nil {
-		w.categoryChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), categoryChannelData(categoryName))
-		if err != nil {
-			return err
+	if w.categoryChannel, err = w.session.State.Channel(categoryID); err != nil {
+		if w.categoryChannel, err = w.session.Channel(categoryID); err != nil {
+			w.categoryChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), categoryChannelData(categoryName))
+			if err != nil {
+				return err
+			}
+		} else {
+			fmt.Println("Resolved channel from API")
 		}
+	} else {
+		fmt.Println("Resolved channel from State")
 	}
 
 	w.listenChannel, err = w.session.GuildChannelCreateComplex(w.GuildDB.GuildID(), listenChannelData(listenChannelName, w.categoryChannel.ID))
@@ -150,10 +156,16 @@ func (w *Widget) newMemberChannel(userID string) (*memberChannel, error) {
 	// Look up the saved channel name for user
 	channelName := w.GuildDB.MemberChannelName(userID)
 
-	user, err := w.session.User(userID)
-	if err != nil {
+	var user *discordgo.User
+
+	if member, err := w.session.State.Member(w.guildID, userID); err == nil {
+		user = member.User
+		fmt.Println("Resolved user from State")
+	} else if user, err = w.session.User(userID); err != nil {
 		w.log.WithError(err).Errorf("Could not resolve userID: %s\n", userID)
 		return nil, err
+	} else {
+		fmt.Println("Resolved user from API")
 	}
 
 	// Or generate one if none found
